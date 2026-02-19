@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "charliermarsh.ruff",
+    "eamodio.gitlens",
+    "donjayamanne.githistory",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml",
+    "mechatroner.rainbow-csv"
+  ]
+}
