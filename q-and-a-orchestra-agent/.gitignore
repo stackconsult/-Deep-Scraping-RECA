@@ -34,3 +34,10 @@ logs/
 
 # Results (regeneratable)
 reca_scrape_results.json
+sweep_checkpoint.json
+all_agents.json
+all_agents.csv
+all_agents_deep.json
+all_agents_deep.csv
+validation_report.json
+

@@ -115,6 +115,23 @@ flake8 .
 mypy .
 ```
 
+## CodeBuddy Integration
+
+This project includes **CodeBuddy** autonomous agent capabilities.
+
+### Personas
+- **Project Manager**: `Activating CodeBuddy Project Manager...` (Planning)
+- **Architect**: `Activating CodeBuddy Architect...` (System Design)
+- **Reviewer**: `Activating CodeBuddy Reviewer...` (Code Quality)
+- **Tester**: `Activating CodeBuddy Tester...` (Verification)
+- **Debugger**: `Activating CodeBuddy Debugger...` (Self-Healing)
+
+### Features
+- **Self-Healing Workflow**: Automatically fixes test failures.
+- **Rules Engine**: Custom project rules in `.codebuddy/rules.md`.
+- **City Normalization**: `scripts/normalize_data.py` ensures consistent data casing.
+
+
 ## License
 
 MIT License — see LICENSE file for details.
