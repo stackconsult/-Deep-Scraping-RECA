@@ -8,7 +8,7 @@ into a unified ContextEnvelope ready for LLM consumption.
 import time
 import uuid
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .models import (
     ContextEnvelope,
@@ -104,7 +104,7 @@ def build_exposition(
         "model_routing": environment.model_routing_mode,
         "hard_walls": rules.hard_walls,
         "feature_flags": environment.feature_flags,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     
     # Calculate approximate token count (rough estimate: 4 chars = 1 token)
@@ -122,7 +122,7 @@ def build_exposition(
         structured=structured,
         token_count=token_count,
         priority_score=priority_score,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 
@@ -215,7 +215,7 @@ async def build_context_envelope(
             rules=rules,
             environment=environment,
             exposition=exposition,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             token_budget_used=token_budget_used,
             processing_time_ms=processing_time_ms,
         )
@@ -234,7 +234,7 @@ async def build_context_envelope(
                 narrative="Context building failed, using minimal context",
                 structured={"error": str(e)}
             ),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             token_budget_used=100,
             processing_time_ms=(time.time() - start_time) * 1000,
         )

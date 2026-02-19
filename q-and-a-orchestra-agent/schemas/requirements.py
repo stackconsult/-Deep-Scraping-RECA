@@ -2,7 +2,7 @@
 Requirements schema for user needs extraction.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -31,8 +31,8 @@ class UserRequirements(BaseModel):
     
     requirements_id: UUID
     session_id: UUID
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Core requirements
     project_description: str
@@ -85,7 +85,7 @@ class RequirementsExtractionSession(BaseModel):
     """Session for extracting requirements from user."""
     
     session_id: UUID
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     current_question_index: int = 0
     questions_asked: List[str] = Field(default_factory=list)
     answers_received: Dict[str, str] = Field(default_factory=dict)

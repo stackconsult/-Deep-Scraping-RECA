@@ -6,7 +6,7 @@ import asyncio
 import logging
 import logging.config
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID
 
@@ -47,7 +47,7 @@ class JSONFormatter(jsonlogger.JsonFormatter):
         
         # Add timestamp if not present
         if not log_record.get('timestamp'):
-            log_record['timestamp'] = datetime.utcnow().isoformat()
+            log_record['timestamp'] = datetime.now(timezone.utc).isoformat()
         
         # Add log level
         if log_record.get('level'):
@@ -230,10 +230,10 @@ def log_execution_time(logger: ContextLogger):
     """Decorator to log function execution time."""
     def decorator(func):
         async def async_wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             try:
                 result = await func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 logger.info(
                     f"Function {func.__name__} completed",
                     function=func.__name__,
@@ -242,7 +242,7 @@ def log_execution_time(logger: ContextLogger):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 logger.error(
                     f"Function {func.__name__} failed",
                     function=func.__name__,
@@ -253,10 +253,10 @@ def log_execution_time(logger: ContextLogger):
                 raise
         
         def sync_wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             try:
                 result = func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 logger.info(
                     f"Function {func.__name__} completed",
                     function=func.__name__,
@@ -265,7 +265,7 @@ def log_execution_time(logger: ContextLogger):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 logger.error(
                     f"Function {func.__name__} failed",
                     function=func.__name__,

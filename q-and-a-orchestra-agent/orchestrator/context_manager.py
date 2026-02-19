@@ -5,7 +5,7 @@ Context Manager - Maintains conversation context and session state across multi-
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
@@ -41,8 +41,8 @@ class ContextManager:
         session = {
             "session_id": session_id,
             "user_id": user_id,
-            "created_at": datetime.utcnow(),
-            "last_activity": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
+            "last_activity": datetime.now(timezone.utc),
             "status": "active",
             "current_phase": "requirements_extraction",
             "metadata": metadata or {},
@@ -92,7 +92,7 @@ class ContextManager:
             session_id: Session ID
         """
         if session_id in self.sessions:
-            self.sessions[session_id]["last_activity"] = datetime.utcnow()
+            self.sessions[session_id]["last_activity"] = datetime.now(timezone.utc)
     
     async def update_session_phase(self, session_id: UUID, new_phase: str) -> None:
         """
@@ -117,7 +117,7 @@ class ContextManager:
             requirements: Requirements data
         """
         if session_id in self.sessions:
-            self.sessions[session_id]["context"]["requirements"] = requirements.dict()
+            self.sessions[session_id]["context"]["requirements"] = requirements.model_dump()
             await self.update_session_activity(session_id)
             
             logger.info(f"Stored requirements for session {session_id}")
@@ -145,7 +145,7 @@ class ContextManager:
             design: Orchestra design data
         """
         if session_id in self.sessions:
-            self.sessions[session_id]["context"]["orchestra_design"] = design.dict()
+            self.sessions[session_id]["context"]["orchestra_design"] = design.model_dump()
             await self.update_session_activity(session_id)
             
             logger.info(f"Stored orchestra design for session {session_id}")
@@ -173,7 +173,7 @@ class ContextManager:
             validation: Validation results
         """
         if session_id in self.sessions:
-            self.sessions[session_id]["context"]["validation_results"] = validation.dict()
+            self.sessions[session_id]["context"]["validation_results"] = validation.model_dump()
             await self.update_session_activity(session_id)
             
             logger.info(f"Stored validation results for session {session_id}")
@@ -189,7 +189,7 @@ class ContextManager:
         """
         if session_id in self.sessions:
             input_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "type": "user_input",
                 "input_type": input_type,
                 "content": user_input
@@ -214,7 +214,7 @@ class ContextManager:
         """
         if session_id in self.sessions:
             response_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "type": "agent_response",
                 "agent_id": agent_id,
                 "response_type": response_type,
@@ -239,7 +239,7 @@ class ContextManager:
         """
         if session_id in self.sessions:
             refinement_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "type": "refinement_request",
                 "refinement_type": refinement_type,
                 "description": description
@@ -263,7 +263,7 @@ class ContextManager:
         """
         if session_id in self.sessions:
             decision_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "type": "decision",
                 "decision_type": decision_type,
                 "decision": decision,
@@ -428,7 +428,7 @@ class ContextManager:
         """
         if session_id in self.sessions:
             self.sessions[session_id]["status"] = "ended"
-            self.sessions[session_id]["last_activity"] = datetime.utcnow()
+            self.sessions[session_id]["last_activity"] = datetime.now(timezone.utc)
             logger.info(f"Ended session {session_id}")
             
     async def cleanup_expired_sessions(self) -> int:
@@ -438,7 +438,7 @@ class ContextManager:
         Returns:
             Number of sessions cleaned up
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired_sessions = []
         
         for session_id, session in self.sessions.items():
@@ -473,7 +473,7 @@ class ContextManager:
         return {
             "session": session,
             "conversation_history": self.conversation_history.get(session_id, []),
-            "exported_at": datetime.utcnow().isoformat()
+            "exported_at": datetime.now(timezone.utc).isoformat()
         }
     
     async def import_session_data(self, session_data: Dict[str, Any]) -> UUID:
@@ -537,7 +537,7 @@ class ContextManager:
         if not self.sessions:
             return 0.0
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         total_duration = sum(
             (now - s["created_at"]).total_seconds() / 60
             for s in self.sessions.values()

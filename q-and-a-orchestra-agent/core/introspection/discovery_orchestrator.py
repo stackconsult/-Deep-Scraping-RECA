@@ -274,7 +274,7 @@ class DiscoveryOrchestrator:
                 "estimated_cost_input_per_1k": profile.estimated_cost_input_per_1k,
                 "estimated_cost_output_per_1k": profile.estimated_cost_output_per_1k,
                 "quality_tier": profile.quality_tier.value,
-                "capabilities": profile.capabilities.dict(),
+                "capabilities": profile.capabilities.model_dump(),
                 "discovered_at": profile.discovered_at.isoformat(),
                 "provider_metadata": profile.provider_metadata
             }

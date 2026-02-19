@@ -4,7 +4,7 @@ Router - Routes messages to appropriate agents and manages workflow orchestratio
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set
 from uuid import UUID
 
@@ -38,8 +38,8 @@ class MessageRouter:
         self.agent_registry[agent_id] = {
             "id": agent_id,
             "config": agent_config,
-            "registered_at": datetime.utcnow(),
-            "last_heartbeat": datetime.utcnow(),
+            "registered_at": datetime.now(timezone.utc),
+            "last_heartbeat": datetime.now(timezone.utc),
             "status": "active",
             "message_types": agent_config.get("message_types", []),
             "capabilities": agent_config.get("capabilities", []),
@@ -195,7 +195,7 @@ class MessageRouter:
             agent_id: Agent ID sending heartbeat
         """
         if agent_id in self.agent_registry:
-            self.agent_registry[agent_id]["last_heartbeat"] = datetime.utcnow()
+            self.agent_registry[agent_id]["last_heartbeat"] = datetime.now(timezone.utc)
             self.agent_registry[agent_id]["status"] = "active"
         else:
             logger.warning(f"Heartbeat from unregistered agent: {agent_id}")
@@ -217,7 +217,7 @@ class MessageRouter:
     
     async def cleanup_inactive_agents(self) -> None:
         """Clean up agents that haven't sent heartbeats recently."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         inactive_threshold = timedelta(minutes=5)
         
         inactive_agents = []
@@ -371,8 +371,8 @@ class MessageRouter:
             # Initialize workflow state
             self.workflow_states[correlation_id] = {
                 "correlation_id": correlation_id,
-                "started_at": datetime.utcnow(),
-                "last_updated": datetime.utcnow(),
+                "started_at": datetime.now(timezone.utc),
+                "last_updated": datetime.now(timezone.utc),
                 "messages": [],
                 "current_phase": "initial",
                 "agents_involved": set(),
@@ -381,7 +381,7 @@ class MessageRouter:
         
         # Update workflow state
         state = self.workflow_states[correlation_id]
-        state["last_updated"] = datetime.utcnow()
+        state["last_updated"] = datetime.now(timezone.utc)
         
         # Determine the string value of the message type
         type_str = message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type)

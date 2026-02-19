@@ -288,7 +288,7 @@ class RequirementsExtractorAgent:
                 intent="extraction_complete",
                 message_type=MessageType.EXTRACTION_COMPLETE,
                 payload={
-                    "requirements": requirements.dict(),
+                    "requirements": requirements.model_dump(),
                     "session_summary": {
                         "total_questions": len(self._question_templates),
                         "questions_asked": len(session.questions_asked),

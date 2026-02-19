@@ -93,7 +93,7 @@ class ImplementationPlannerAgent:
                 agent_id=self.agent_id,
                 intent="plan_completed",
                 message_type=MessageType.PLAN_COMPLETED,
-                payload=payload.dict(),
+                payload=payload.model_dump(),
                 session_id=message.session_id
             )
             

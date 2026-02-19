@@ -113,8 +113,8 @@ class ArchitectureDesignerAgent:
                 intent="design_completed",
                 message_type=MessageType.DESIGN_COMPLETED,
                 payload={
-                    "design": design.dict(),
-                    "design_summary": payload.dict()
+                    "design": design.model_dump(),
+                    "design_summary": payload.model_dump()
                 },
                 session_id=message.session_id
             )

@@ -5,7 +5,7 @@ Message Bus - Simplified Redis-based event-driven communication for agents.
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Set
 from uuid import UUID
 
@@ -91,7 +91,7 @@ class MessageBus:
             self.dead_letter_queue.append({
                 "message": message.model_dump(),
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
             raise
     
@@ -147,7 +147,7 @@ class DeadLetterQueue:
         dead_letter = {
             "message": message.model_dump(),
             "error": error,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "retry_count": 0
         }
         

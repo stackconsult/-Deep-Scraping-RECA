@@ -7,7 +7,7 @@ User, Intent, Domain, Rules, Environment, Exposition
 
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class UserContext(BaseModel):
@@ -67,7 +67,7 @@ class ExpositionContext(BaseModel):
     structured: Dict[str, Any] = Field(default_factory=dict, description="Machine-usable pieces")
     token_count: Optional[int] = None
     priority_score: Optional[float] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ContextEnvelope(BaseModel):
@@ -81,7 +81,7 @@ class ContextEnvelope(BaseModel):
     
     # Metadata
     context_id: str = Field(description="Unique identifier for this context envelope")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     token_budget_used: Optional[int] = None
     processing_time_ms: Optional[float] = None
 

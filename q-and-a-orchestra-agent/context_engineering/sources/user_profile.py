@@ -6,7 +6,7 @@ from auth claims and mem0 memory system.
 """
 
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ..models import UserContext
 
@@ -87,7 +87,7 @@ def build_user_context(auth_claims: Dict[str, Any], mem0_client=None) -> UserCon
         preferences=preferences,
         history_summary=history_summary,
         session_count=session_count,
-        last_seen=last_seen or datetime.utcnow(),
+        last_seen=last_seen or datetime.now(timezone.utc),
     )
 
 

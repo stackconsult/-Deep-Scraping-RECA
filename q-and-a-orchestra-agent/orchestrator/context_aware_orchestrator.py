@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.model_router import ModelRouter
 
@@ -112,7 +112,7 @@ class ContextAwareOrchestrator:
         if not self.is_running:
             raise RuntimeError("Orchestrator not running")
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             # Extract intent from context
@@ -137,7 +137,7 @@ class ContextAwareOrchestrator:
             return {
                 "error": str(e),
                 "response": "I encountered an error while processing your request.",
-                "processing_time_ms": (datetime.utcnow() - start_time).total_seconds() * 1000,
+                "processing_time_ms": (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
             }
     
     async def _run_analysis_flow(
@@ -248,9 +248,9 @@ class ContextAwareOrchestrator:
             "narrative": context_envelope.exposition.narrative,
             "structured": context_envelope.exposition.structured,
             "requirements": requirements,
-            "domain": context_envelope.domain.dict(),
+            "domain": context_envelope.domain.model_dump(),
             "rules": context_envelope.rules,
-            "environment": context_envelope.environment.dict(),
+            "environment": context_envelope.environment.model_dump(),
         }
         
         implementation_plan = await self.implementation_planner.plan(
@@ -282,8 +282,8 @@ class ContextAwareOrchestrator:
             "narrative": context_envelope.exposition.narrative,
             "structured": context_envelope.exposition.structured,
             "problem_description": message,
-            "domain": context_envelope.domain.dict(),
-            "environment": context_envelope.environment.dict(),
+            "domain": context_envelope.domain.model_dump(),
+            "environment": context_envelope.environment.model_dump(),
         }
         
         # Use repository analyzer to understand code context if applicable
@@ -328,7 +328,7 @@ class ContextAwareOrchestrator:
             "structured": context_envelope.exposition.structured,
             "security_requirements": message,
             "compliance_rules": context_envelope.rules.hard_walls,
-            "domain": context_envelope.domain.dict(),
+            "domain": context_envelope.domain.model_dump(),
         }
         
         # Analyze repository for security issues

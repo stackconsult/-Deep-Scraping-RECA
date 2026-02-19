@@ -135,8 +135,8 @@ class ValidatorAgent:
                 intent="validation_completed",
                 message_type=MessageType.VALIDATION_COMPLETED,
                 payload={
-                    "validation_result": validation_result.dict(),
-                    "validation_summary": payload.dict()
+                    "validation_result": validation_result.model_dump(),
+                    "validation_summary": payload.model_dump()
                 },
                 session_id=message.session_id
             )

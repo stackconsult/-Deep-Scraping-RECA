@@ -1,0 +1,16 @@
+{
+  "completed_prefixes": [
+    "A",
+    "Aa",
+    "Ab",
+    "Ac",
+    "Ad",
+    "Ae"
+  ],
+  "failed_prefixes": [],
+  "total_agents_found": 21923,
+  "started_at": "2026-02-19T02:26:16.849193+00:00",
+  "last_updated": "2026-02-19T02:30:43.065884+00:00",
+  "phase": "surface",
+  "deep_completed_ids": []
+}

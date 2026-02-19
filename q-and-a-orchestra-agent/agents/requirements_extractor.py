@@ -123,7 +123,7 @@ class RequirementsExtractorAgent:
                     agent_id=self.agent_id,
                     intent="requirements_extracted",
                     message_type=MessageType.REQUIREMENTS_EXTRACTED,
-                    payload=requirements.dict(),
+                    payload=requirements.model_dump(),
                     session_id=session_id
                 )
                 
@@ -142,7 +142,7 @@ class RequirementsExtractorAgent:
                     agent_id=self.agent_id,
                     intent="requirements_extracted",
                     message_type=MessageType.REQUIREMENTS_EXTRACTED,
-                    payload=requirements.dict(),
+                    payload=requirements.model_dump(),
                     session_id=session_id
                 )
             
