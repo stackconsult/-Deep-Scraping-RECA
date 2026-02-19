@@ -168,7 +168,7 @@ class RECAHttpScraper:
             last = get_text(4)
             aka = get_text(5)
             brokerage = get_text(6)
-            city = get_text(7)
+            city = get_text(7).title()
             
             if "Licensed" not in status and "suspended" not in status.lower() and "cancelled" not in status.lower():
                 continue
