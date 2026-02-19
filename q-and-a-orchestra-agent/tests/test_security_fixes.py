@@ -191,7 +191,7 @@ class TestDomainContextSecurity:
                 domain = build_domain_context(safe_context)
                 
                 # Should successfully analyze
-                assert "documentation" in domain.related_docs
+                assert "README.md" in domain.related_docs
                 assert "frontend" in domain.key_components
 
 

@@ -50,6 +50,8 @@ SECURITY_CONFIG = {
         "node_modules/", ".npm/",
         ".venv/", "venv/", "env/",
         "*.log", "*.tmp",
+        "secrets.json",
+        "database.sql",
     ],
 }
 
@@ -76,6 +78,10 @@ def validate_repo_path_security(repo_path: str) -> Dict[str, Any]:
     for pattern in SECURITY_CONFIG["blocked_file_patterns"]:
         if pattern in repo_path:
             return {"valid": False, "reason": f"Blocked pattern: {pattern}"}
+            
+    # Strict path traversal check (disallow '..' segments completely)
+    if ".." in repo_path.split(os.sep):
+        return {"valid": False, "reason": "Path traversal detected (.. segment)"}
     
     return {"valid": True, "reason": None}
 

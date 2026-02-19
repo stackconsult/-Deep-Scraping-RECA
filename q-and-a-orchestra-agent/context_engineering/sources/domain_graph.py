@@ -11,7 +11,7 @@ import pathlib
 import re
 
 from ..models import DomainContext
-from ...config.security_config import validate_repo_path_security, is_safe_file
+from config.security_config import validate_repo_path_security, is_safe_file
 
 logger = __import__("logging").getLogger(__name__)
 
