@@ -60,6 +60,16 @@ python scripts/full_sweep.py --deep --resume
 
 # 8. Scrape specific letters only
 python scripts/full_sweep.py --letters A B C --deep
+
+# 9. Run Async Scraper (Redis required)
+# Start Redis
+redis-server
+
+# Start Worker
+python scripts/scraper_worker.py
+
+# Queue jobs via Agent or QueueManager
+# (See agents/reca_scraper_agent.py for usage)
 ```
 
 ## Architecture
