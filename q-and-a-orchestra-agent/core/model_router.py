@@ -228,16 +228,61 @@ class ModelRouter:
         
         return models_by_provider
     
-    async def health_check(self) -> dict:
+    @property
+    def clients(self) -> Dict[str, Optional[BaseModelClient]]:
+        """Get all configured clients."""
+        return self._clients
+
+    async def health_check(self) -> Dict[str, Dict[str, Any]]:
         """Check health of all providers."""
         health_status = {}
         
-        for provider_name, client in self.clients.items():
+        for provider_name in self._clients.keys():
             try:
-                health_status[provider_name] = client.health_check()
+                # Ensure client is initialized
+                if self._clients[provider_name] is None:
+                    try:
+                        self._client_for(provider_name)
+                    except Exception as e:
+                        msg = str(e)
+                        # Don't log expected config errors as errors
+                        if "API key not found" in msg:
+                            logger.info(f"Provider {provider_name} not configured: {msg}")
+                        else:
+                            logger.warning(f"Failed to initialize {provider_name}: {msg}")
+                            
+                        health_status[provider_name] = {
+                            "status": "unconfigured",
+                            "error": msg
+                        }
+                        continue
+                
+                client = self._clients[provider_name]
+                if client:
+                    try:
+                        is_healthy = client.health_check()
+                        if is_healthy:
+                            health_status[provider_name] = {"status": "healthy"}
+                        else:
+                            health_status[provider_name] = {
+                                "status": "unhealthy", 
+                                "error": "Provider reported unhealthy"
+                            }
+                    except Exception as e:
+                        logger.error(f"Health check error for {provider_name}: {e}")
+                        health_status[provider_name] = {
+                            "status": "error",
+                            "error": str(e)
+                        }
+                else:
+                    health_status[provider_name] = {"status": "unconfigured"}
+                    
             except Exception as e:
                 logger.error(f"Health check failed for {provider_name}: {e}")
-                health_status[provider_name] = False
+                health_status[provider_name] = {
+                    "status": "error",
+                    "error": str(e)
+                }
         
         return health_status
     

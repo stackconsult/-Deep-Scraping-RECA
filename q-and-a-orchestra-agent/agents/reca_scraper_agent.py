@@ -6,6 +6,7 @@ from uuid import UUID
 from core.model_router import ModelRouter
 from schemas.messages import AgentMessage, MessageType
 from integrations.reca_scraper_logic import RECAHttpScraper
+from core.queue_manager import QueueManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class RECAScraperAgent:
         self.router = model_router
         self.agent_id = "reca_scraper"
         self.scraper = RECAHttpScraper()
+        self.queue_manager = QueueManager()
 
     async def process_message(self, message: AgentMessage) -> Optional[AgentMessage]:
         """
@@ -26,10 +28,12 @@ class RECAScraperAgent:
     async def _handle_scrape_request(self, message: AgentMessage) -> AgentMessage:
         """
         Executes the scraping process based on the search criteria in the message content.
+        Supports both synchronous and asynchronous execution.
         """
         session_id = message.session_id
         search_params = message.payload.get("search_params", {})
         last_name = search_params.get("last_name")
+        use_async = message.payload.get("async", False)
 
         if not last_name:
             return AgentMessage(
@@ -40,6 +44,39 @@ class RECAScraperAgent:
                 session_id=session_id
             )
 
+        # Async Path
+        if use_async:
+            try:
+                job_id = self.queue_manager.enqueue({
+                    "type": "scrape_request",
+                    "payload": message.payload,
+                    "session_id": str(session_id)
+                })
+                
+                logger.info(f"Enqueued scraping job {job_id} for {last_name}")
+                
+                return AgentMessage(
+                    agent_id=self.agent_id,
+                    intent="job_queued",
+                    message_type=MessageType.JOB_QUEUED,  # Ensure this type exists or use generic info
+                    payload={
+                        "job_id": job_id,
+                        "status": "queued",
+                        "message": f"Scraping job for {last_name} has been queued."
+                    },
+                    session_id=session_id
+                )
+            except Exception as e:
+                logger.error(f"Failed to enqueue job for {last_name}: {e}")
+                return AgentMessage(
+                    agent_id=self.agent_id,
+                    intent="error_occurred",
+                    message_type=MessageType.ERROR_OCCURRED,
+                    payload={"error": f"Failed to queue job: {str(e)}"},
+                    session_id=session_id
+                )
+
+        # Sync Path
         logger.info(f"Agent {self.name if hasattr(self, 'name') else self.agent_id} starting scrape for last name: {last_name}")
         
         try:

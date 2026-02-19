@@ -146,7 +146,7 @@ class TestModelRouter:
         assert router.registry is not None
         assert router.policy_engine is not None
         assert router.telemetry is not None
-        assert len(router.clients) == 4  # ollama, openai, anthropic, generic_openai
+        assert len(router.clients) == 5  # ollama, openai, anthropic, generic_openai, google
     
     def test_plan(self, router, mock_policy_engine, mock_telemetry):
         """Test model planning (dry run)."""
@@ -283,8 +283,8 @@ class TestModelRouter:
         """Test health check of all providers."""
         health = await router.health_check()
         
-        assert health["ollama"] is True
-        assert health["anthropic"] is True
+        assert health["ollama"]["status"] == "healthy"
+        assert health["anthropic"]["status"] == "healthy"
         
         # Verify all clients were checked
         mock_clients["ollama"].health_check.assert_called_once()

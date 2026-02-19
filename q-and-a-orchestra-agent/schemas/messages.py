@@ -41,6 +41,7 @@ class MessageType(str, Enum):
     # Scraping
     SCRAPE_REQUEST = "scrape_request"
     SCRAPE_COMPLETED = "scrape_completed"
+    JOB_QUEUED = "job_queued"
     
     # System
     ERROR_OCCURRED = "error_occurred"

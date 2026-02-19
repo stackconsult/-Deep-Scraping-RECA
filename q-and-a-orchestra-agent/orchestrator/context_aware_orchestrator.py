@@ -6,6 +6,7 @@ agents with complete understanding of user requests and system state.
 """
 
 import asyncio
+import json
 import logging
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
@@ -37,7 +38,16 @@ class ContextAwareOrchestrator:
     to drive agent selection and execution.
     """
     
-    def __init__(self, model_router: ModelRouter, redis_url: str = "redis://localhost:6379/0"):
+    def __init__(
+        self, 
+        model_router: ModelRouter, 
+        redis_url: str = "redis://localhost:6379/0",
+        repository_analyzer: Optional[RepositoryAnalyzerAgent] = None,
+        requirements_extractor: Optional[RequirementsExtractorAgent] = None,
+        architecture_designer: Optional[ArchitectureDesignerAgent] = None,
+        implementation_planner: Optional[ImplementationPlannerAgent] = None,
+        validator: Optional[ValidatorAgent] = None
+    ):
         self.router_client = model_router
         
         # Core components
@@ -46,12 +56,16 @@ class ContextAwareOrchestrator:
         self.context_manager = ContextManager()
         self.conversation_memory = ConversationMemory(self.context_manager)
         
-        # Agents
-        self.repository_analyzer = RepositoryAnalyzerAgent(model_router, self)
-        self.requirements_extractor = RequirementsExtractorAgent(model_router)
-        self.architecture_designer = ArchitectureDesignerAgent(model_router)
-        self.implementation_planner = ImplementationPlannerAgent(model_router)
-        self.validator = ValidatorAgent(model_router)
+        # Helper components
+        from core.file_reader import AsyncFileReader
+        self.file_reader = AsyncFileReader()
+        
+        # Agents - Dependency Injection with defaults
+        self.repository_analyzer = repository_analyzer or RepositoryAnalyzerAgent(model_router, self.file_reader)
+        self.requirements_extractor = requirements_extractor or RequirementsExtractorAgent(model_router)
+        self.architecture_designer = architecture_designer or ArchitectureDesignerAgent(model_router)
+        self.implementation_planner = implementation_planner or ImplementationPlannerAgent(model_router)
+        self.validator = validator or ValidatorAgent(model_router)
         
         # System state
         self.is_running = False
@@ -114,6 +128,13 @@ class ContextAwareOrchestrator:
         
         start_time = datetime.now(timezone.utc)
         
+        # Load session if provided
+        if session_id:
+            try:
+                await self._load_session(session_id)
+            except Exception as e:
+                logger.warning(f"Failed to load session {session_id}: {e}")
+        
         try:
             # Extract intent from context
             primary_intent = context_envelope.intent.primary_intent if context_envelope else "general_assistance"
@@ -134,11 +155,57 @@ class ContextAwareOrchestrator:
                 
         except Exception as e:
             logger.error(f"Error handling request: {e}")
+            # Persist session state
+            if session_id:
+                await self._save_session(session_id, {
+                    "last_active": datetime.now(timezone.utc).isoformat(),
+                    "last_intent": primary_intent,
+                    "conversation_id": context_envelope.context_id if context_envelope else None
+                })
+                
             return {
                 "error": str(e),
                 "response": "I encountered an error while processing your request.",
                 "processing_time_ms": (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
             }
+            
+    async def _save_session(self, session_id: str, data: Dict[str, Any]) -> None:
+        """Save session data to Redis."""
+        try:
+            if self.message_bus.redis_client:
+                key = f"session:{session_id}"
+                # Update local cache
+                session_uuid = UUID(session_id) if isinstance(session_id, str) else session_id
+                if session_uuid not in self.active_sessions:
+                    self.active_sessions[session_uuid] = {}
+                self.active_sessions[session_uuid].update(data)
+                
+                # Persist to Redis
+                # Note: redis_client in MessageBus might be sync or async depending on init
+                # We assume sync for now based on MessageBus implementation, but wrap in try/except
+                self.message_bus.redis_client.set(key, json.dumps(self.active_sessions[session_uuid]))
+                # Set expiry (24 hours)
+                self.message_bus.redis_client.expire(key, 86400)
+        except Exception as e:
+            logger.warning(f"Failed to persist session {session_id}: {e}")
+            
+    async def _load_session(self, session_id: str) -> None:
+        """Load session data from Redis."""
+        try:
+            session_uuid = UUID(session_id) if isinstance(session_id, str) else session_id
+            
+            # If already in memory, continue
+            if session_uuid in self.active_sessions:
+                return
+
+            if self.message_bus.redis_client:
+                key = f"session:{str(session_uuid)}"
+                # Note: redis_client might be sync or async
+                data = self.message_bus.redis_client.get(key)
+                if data:
+                    self.active_sessions[session_uuid] = json.loads(data)
+        except Exception as e:
+            logger.warning(f"Failed to load session {session_id}: {e}")
     
     async def _run_analysis_flow(
         self,
