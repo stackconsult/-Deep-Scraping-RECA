@@ -312,16 +312,29 @@ def run_deep_scrape(
         logger.info(f"[{i}/{total}] Deep scraping {name} (drill_id: {drill_id[:20]}...)")
 
         try:
-            email = scraper.perform_drillthrough(drill_id)
-            if email:
+            contact_info = scraper.perform_drillthrough(drill_id)
+            if contact_info:
+                email = contact_info.get("email", "")
+                phone = contact_info.get("phone", "")
+                
                 agent["email"] = email
-                enriched += 1
-                logger.info(f"  → Email: {email}")
+                agent["phone"] = phone
+                
+                if email or phone:
+                    enriched += 1
+                    contact_str = f"Email: {email}" if email else ""
+                    if phone:
+                        contact_str += f", Phone: {phone}" if contact_str else f"Phone: {phone}"
+                    logger.info(f"  → {contact_str}")
+                else:
+                    logger.info(f"  → No contact info found")
             else:
                 agent["email"] = ""
-                logger.info(f"  → No email found")
+                agent["phone"] = ""
+                logger.info(f"  → No contact info found")
         except Exception as e:
             agent["email"] = ""
+            agent["phone"] = ""
             failed += 1
             logger.warning(f"  → Drillthrough failed: {e}")
 
@@ -347,9 +360,13 @@ def run_deep_scrape(
     save_json(agents, DEEP_RESULTS_FILE)
     save_csv(agents, DEEP_CSV_FILE)
 
+    # Count actual emails and phones
+    email_count = sum(1 for a in agents if a.get("email"))
+    phone_count = sum(1 for a in agents if a.get("phone"))
+    
     logger.info(
-        f"Deep scrape complete: {enriched} emails found, {failed} failures, "
-        f"{skipped} skipped (already done)"
+        f"Deep scrape complete: {email_count} emails, {phone_count} phones, "
+        f"{failed} failures, {skipped} skipped (already done)"
     )
     return agents
 
