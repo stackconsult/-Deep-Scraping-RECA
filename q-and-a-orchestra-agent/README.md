@@ -43,6 +43,11 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env — set GOOGLE_API_KEY (required)
 
+# 2.5 Setup Development Environment (Fixes Git extensions)
+# If you encounter issues with Git extensions or pre-commit hooks:
+./scripts/setup_dev.sh
+# Note: If this fails, run `brew install git-lfs` manually and try again.
+
 # 3. Run integration tests
 pytest tests/test_integration.py -v
 
