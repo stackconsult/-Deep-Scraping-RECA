@@ -15,7 +15,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Depends
@@ -344,7 +344,7 @@ async def health_check(tenant_context: Optional[TenantContext] = Depends(get_ten
     return HealthResponse(
         status="healthy" if all(c.get("status") == "healthy" for c in components.values() if isinstance(c, dict)) else "degraded",
         version="2.0.0",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         components=components,
         tenant_id=tenant_context.tenant_id if tenant_context else None
     )

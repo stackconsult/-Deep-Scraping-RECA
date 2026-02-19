@@ -10,7 +10,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Depends, Query
@@ -386,7 +386,7 @@ async def health_check(tenant_context: Optional[TenantContext] = Depends(get_ten
     return HealthResponse(
         status="healthy" if all(c.get("status") == "healthy" for c in components.values() if isinstance(c, dict)) else "degraded",
         version="2.1.0",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         components=components,
         tenant_id=tenant_context.tenant_id if tenant_context else None
     )
@@ -408,7 +408,7 @@ async def chat_v2_with_context(
     if not tenant_context:
         raise HTTPException(status_code=400, detail="Tenant context required")
     
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     
     try:
         # Step 1: Build Context Envelope
@@ -613,7 +613,7 @@ async def chat_v2_with_context(
         )
         
         # Calculate latency
-        latency_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         
         # Prepare response
         response = ChatResponse(

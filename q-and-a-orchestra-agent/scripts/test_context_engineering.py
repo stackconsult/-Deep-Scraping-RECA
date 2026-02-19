@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 # Add parent directory to path
@@ -39,7 +39,7 @@ class MockMem0Client:
         return {
             "summary": "User has worked on 5 projects, prefers TypeScript, and has been active for 3 months",
             "session_count": 42,
-            "last_seen": datetime.utcnow().isoformat(),
+            "last_seen": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -311,7 +311,7 @@ async def test_performance():
     times = []
     
     for i in range(iterations):
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         
         envelope = await build_context_envelope(
             auth_claims=auth_claims,
@@ -320,7 +320,7 @@ async def test_performance():
             repo_analyzer_client=MockRepoAnalyzer(),
         )
         
-        end = datetime.utcnow()
+        end = datetime.now(timezone.utc)
         times.append((end - start).total_seconds() * 1000)
     
     avg_time = sum(times) / len(times)

@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from enum import Enum
 import uuid
 from collections import defaultdict
@@ -60,7 +60,7 @@ class OptimizationRecommendation:
     # Metadata
     confidence_score: float = 0.0  # 0.0 to 1.0
     priority: str = "medium"  # low, medium, high, critical
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
     
     # Status

@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 import uuid
 import smtplib
@@ -70,8 +70,8 @@ class BudgetConfig:
     alert_emails: List[str] = field(default_factory=list)
     slack_webhook: Optional[str] = None
     
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -335,7 +335,7 @@ class BudgetManager:
             if not alert:
                 return False
             
-            alert.resolved_at = datetime.utcnow()
+            alert.resolved_at = datetime.now(timezone.utc)
             
             # Update in database
             await self._update_alert(alert)

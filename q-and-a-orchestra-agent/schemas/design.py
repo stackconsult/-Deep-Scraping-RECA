@@ -2,7 +2,7 @@
 Architecture design schemas for agent orchestras.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -96,8 +96,8 @@ class OrchestraDesign(BaseModel):
     
     design_id: UUID
     session_id: UUID
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Basic info
     orchestra_name: str
@@ -154,7 +154,7 @@ class ValidationResult(BaseModel):
     
     validation_id: UUID
     design_id: UUID
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Results
     passed_rules: List[str] = Field(default_factory=list)

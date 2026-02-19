@@ -2,7 +2,7 @@
 from typing import Any, Optional
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .task_profiles import TaskProfile
 from .policy_engine import ScoredModel
@@ -21,7 +21,7 @@ class Telemetry:
         """Record a model selection plan (dry run)."""
         if choice:
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "task_type": task.task_type,
                 "provider": choice.model.provider_name,
                 "model": choice.model.model_id,
@@ -35,7 +35,7 @@ class Telemetry:
     def before_invoke(self, task: TaskProfile, choice: ScoredModel) -> None:
         """Record before model invocation."""
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "task_type": task.task_type,
             "provider": choice.model.provider_name,
             "model": choice.model.model_id,
@@ -101,7 +101,7 @@ class Telemetry:
         # Track cost by provider
         provider = choice.model.provider_name
         if provider not in self.cost_tracker:
-            self.cost_tracker[provider] = {"daily": 0.0, "monthly": 0.0, "last_reset": datetime.utcnow()}
+            self.cost_tracker[provider] = {"daily": 0.0, "monthly": 0.0, "last_reset": datetime.now(timezone.utc)}
         
         self.cost_tracker[provider]["daily"] += cost
         self.cost_tracker[provider]["monthly"] += cost

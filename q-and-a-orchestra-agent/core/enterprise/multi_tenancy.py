@@ -10,7 +10,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 from contextvars import ContextVar
@@ -65,8 +65,8 @@ class TenantConfig:
     admin_email: Optional[str] = None
     billing_contact: Optional[str] = None
     
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -203,7 +203,7 @@ class MultiTenancyManager:
                 if hasattr(config, key):
                     setattr(config, key, value)
             
-            config.updated_at = datetime.utcnow()
+            config.updated_at = datetime.now(timezone.utc)
             
             # Store updated configuration
             await self._store_tenant_config(config)
