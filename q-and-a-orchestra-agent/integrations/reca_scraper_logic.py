@@ -191,8 +191,11 @@ class RECAHttpScraper:
             
         return agents
 
-    def perform_drillthrough(self, drill_id: str) -> Optional[str]:
-        """Execute drillthrough to get detail page and extract email."""
+    def perform_drillthrough(self, drill_id: str) -> Optional[Dict[str, str]]:
+        """
+        Execute drillthrough to get detail page and extract contact info.
+        Returns dict with 'email' and 'phone' keys, or None if request fails.
+        """
         if not self._initialized:
             self._fetch_initial_state()
             
@@ -207,15 +210,39 @@ class RECAHttpScraper:
         if 'Button1' in form_data: del form_data['Button1']
         
         resp = self.session.post(BASE_URL, data=form_data, timeout=60)
+        html = resp.text
         
-        # Extract email from response text
-        email_match = re.search(r'mailto:([\w\.-]+@[\w\.-]+\.\w+)', resp.text)
+        contact_info = {"email": None, "phone": None}
+        
+        # Extract email - try mailto link first
+        email_match = re.search(r'mailto:([\w\.-]+@[\w\.-]+\.\w+)', html)
         if email_match:
-            return email_match.group(1)
-            
-        # Fallback to general regex
-        emails = re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', resp.text)
-        if emails:
-            return emails[0]
-            
-        return None
+            contact_info["email"] = email_match.group(1)
+        else:
+            # Fallback to general email regex
+            emails = re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', html)
+            if emails:
+                contact_info["email"] = emails[0]
+        
+        # Extract phone - try common patterns
+        # Patterns: (403) 555-1234, 403-555-1234, 403.555.1234, 4035551234
+        phone_patterns = [
+            r'\((\d{3})\)\s*(\d{3})[-.]\s*(\d{4})',  # (403) 555-1234
+            r'(\d{3})[-.]\s*(\d{3})[-.]\s*(\d{4})',  # 403-555-1234 or 403.555.1234
+            r'(\d{3})[\s.](\d{3})[\s.](\d{4})',      # 403 555 1234
+            r'(\d{10})',                              # 4035551234
+        ]
+        
+        for pattern in phone_patterns:
+            phone_match = re.search(pattern, html)
+            if phone_match:
+                groups = phone_match.groups()
+                if len(groups) == 3:
+                    contact_info["phone"] = f"({groups[0]}) {groups[1]}-{groups[2]}"
+                elif len(groups) == 1 and len(groups[0]) == 10:
+                    # Format 10-digit number
+                    num = groups[0]
+                    contact_info["phone"] = f"({num[:3]}) {num[3:6]}-{num[6:]}"
+                break
+        
+        return contact_info

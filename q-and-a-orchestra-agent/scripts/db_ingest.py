@@ -24,7 +24,7 @@ except ImportError:
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS agents (
     id              SERIAL PRIMARY KEY,
-    drill_id        VARCHAR(255) UNIQUE,
+    drill_id        VARCHAR(255) UNIQUE NOT NULL,
     first_name      VARCHAR(255),
     middle_name     VARCHAR(255),
     last_name       VARCHAR(255),
@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS agents (
     aka             VARCHAR(255),
     email           VARCHAR(255),
     phone           VARCHAR(50),
+    quality_score   INTEGER DEFAULT 0,
     scraped_at      TIMESTAMP DEFAULT NOW(),
     updated_at      TIMESTAMP DEFAULT NOW()
 );
@@ -43,25 +44,27 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS idx_agents_drill_id ON agents(drill_id);
 CREATE INDEX IF NOT EXISTS idx_agents_last_name ON agents(last_name);
 CREATE INDEX IF NOT EXISTS idx_agents_city ON agents(city);
+CREATE INDEX IF NOT EXISTS idx_agents_quality_score ON agents(quality_score DESC);
 """
 
 UPSERT_SQL = """
 INSERT INTO agents (drill_id, first_name, middle_name, last_name, full_name,
-                    status, brokerage, city, sector, aka, email, phone, updated_at)
+                    status, brokerage, city, sector, aka, email, phone, quality_score, updated_at)
 VALUES %s
 ON CONFLICT (drill_id) DO UPDATE SET
-    first_name  = EXCLUDED.first_name,
-    middle_name = EXCLUDED.middle_name,
-    last_name   = EXCLUDED.last_name,
-    full_name   = EXCLUDED.full_name,
-    status      = EXCLUDED.status,
-    brokerage   = EXCLUDED.brokerage,
-    city        = EXCLUDED.city,
-    sector      = EXCLUDED.sector,
-    aka         = EXCLUDED.aka,
-    email       = EXCLUDED.email,
-    phone       = EXCLUDED.phone,
-    updated_at  = NOW();
+    first_name    = EXCLUDED.first_name,
+    middle_name   = EXCLUDED.middle_name,
+    last_name     = EXCLUDED.last_name,
+    full_name     = EXCLUDED.full_name,
+    status        = EXCLUDED.status,
+    brokerage     = EXCLUDED.brokerage,
+    city          = EXCLUDED.city,
+    sector        = EXCLUDED.sector,
+    aka           = EXCLUDED.aka,
+    email         = EXCLUDED.email,
+    phone         = EXCLUDED.phone,
+    quality_score = EXCLUDED.quality_score,
+    updated_at    = NOW();
 """
 
 
@@ -104,6 +107,7 @@ def ingest(agents: list, database_url: str, create_table: bool = False):
             a.get("aka", ""),
             a.get("email", ""),
             a.get("phone", ""),
+            a.get("quality_score", 0),
             "NOW()",
         ))
 
@@ -113,7 +117,7 @@ def ingest(agents: list, database_url: str, create_table: bool = False):
 
     # Use execute_values for efficient bulk insert
     # We need to handle the NOW() specially
-    template = "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())"
+    template = "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())"
     rows_clean = [r[:-1] for r in rows]  # Remove the NOW() placeholder
 
     execute_values(cur, UPSERT_SQL, rows_clean, template=template, page_size=500)

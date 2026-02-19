@@ -105,16 +105,19 @@ class RECAScraperAgent:
             )
 
     async def _perform_deep_scrape(self, session_id: str, results: List[Dict]) -> List[Dict]:
-        """Perform deep scraping for each agent in the results to extract emails."""
+        """Perform deep scraping for each agent in the results to extract contact info."""
         deep_results = []
         for agent in results:
             drill_id = agent.get("drill_id")
             if drill_id:
                 try:
                     logger.info(f"Session {session_id}: Performing deep scrape for {agent.get('name')} (Drill ID: {drill_id})")
-                    email = self.scraper.perform_drillthrough(drill_id)
-                    if email:
-                        agent["email"] = email
+                    contact_info = self.scraper.perform_drillthrough(drill_id)
+                    if contact_info:
+                        if contact_info.get("email"):
+                            agent["email"] = contact_info["email"]
+                        if contact_info.get("phone"):
+                            agent["phone"] = contact_info["phone"]
                 except Exception as e:
                     logger.error(f"Deep scrape failed for {agent.get('name')}: {e}")
             
