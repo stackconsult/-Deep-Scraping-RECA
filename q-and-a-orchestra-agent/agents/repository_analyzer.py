@@ -6,7 +6,8 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
+from core.task_profiles import TaskProfile
 from schemas.messages import AgentMessage, MessageType, RepositoryAnalysisPayload
 from schemas.design import AgentType, CommunicationPattern, SafetyMechanism
 
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 class RepositoryAnalyzerAgent:
     """Analyzes repository structure and extracts architecture patterns."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic, repo_reader: Any):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter, repo_reader: Any):
+        self.router = model_router
         self.repo_reader = repo_reader
         self.agent_id = "repository_analyzer"
         
@@ -145,14 +146,20 @@ class RepositoryAnalyzerAgent:
         """
         
         try:
-            response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=2000,
+            task = TaskProfile(
+                task_type="qa",
+                criticality="medium",
+                context_size=len(prompt),
+                metadata={"purpose": "pattern_extraction"}
+            )
+            
+            result = await self.router.select_and_invoke(
+                task=task,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            # Parse Claude's response
-            content = response.content[0].text
+            # Parse response
+            content = result["content"]
             # In production, you'd want proper JSON parsing with error handling
             return {"extracted_patterns": content}
             

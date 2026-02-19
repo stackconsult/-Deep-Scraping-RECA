@@ -7,9 +7,9 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
 from schemas.messages import AgentMessage, MessageType, ValidationPayload
-from schemas.design import OrchestraDesign, ORCHESTRA_VALIDATION_RULES, ValidationResult
+from schemas.design import OrchestraDesign, ORCHESTRA_VALIDATION_RULES, ValidationResult, SafetyMechanism
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class ValidatorAgent:
     """Validates orchestra designs against best practices and safety requirements."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter):
+        self.router = model_router
         self.agent_id = "validator"
         
         # Validation rules

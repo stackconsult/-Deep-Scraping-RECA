@@ -5,15 +5,16 @@ Main Orchestrator - Coordinates all agents and manages the overall workflow.
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
 
 from agents.repository_analyzer import RepositoryAnalyzerAgent
 from agents.requirements_extractor import RequirementsExtractorAgent
 from agents.architecture_designer import ArchitectureDesignerAgent
 from agents.implementation_planner import ImplementationPlannerAgent
 from agents.validator import ValidatorAgent
+from agents.reca_scraper_agent import RECAScraperAgent
 
 from orchestrator.message_bus import MessageBus
 from orchestrator.router import MessageRouter
@@ -27,8 +28,8 @@ logger = logging.getLogger(__name__)
 class OrchestraOrchestrator:
     """Main orchestrator for the Q&A Orchestra Agent system."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic, redis_url: str = "redis://localhost:6379/0"):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter, redis_url: str = "redis://localhost:6379/0"):
+        self.router_client = model_router
         
         # Core components
         self.message_bus = MessageBus(redis_url)
@@ -37,11 +38,12 @@ class OrchestraOrchestrator:
         self.conversation_memory = ConversationMemory(self.context_manager)
         
         # Agents
-        self.repository_analyzer = RepositoryAnalyzerAgent(anthropic_client, self)
-        self.requirements_extractor = RequirementsExtractorAgent(anthropic_client)
-        self.architecture_designer = ArchitectureDesignerAgent(anthropic_client)
-        self.implementation_planner = ImplementationPlannerAgent(anthropic_client)
-        self.validator = ValidatorAgent(anthropic_client)
+        self.repository_analyzer = RepositoryAnalyzerAgent(model_router, self)
+        self.requirements_extractor = RequirementsExtractorAgent(model_router)
+        self.architecture_designer = ArchitectureDesignerAgent(model_router)
+        self.implementation_planner = ImplementationPlannerAgent(model_router)
+        self.validator = ValidatorAgent(model_router)
+        self.reca_scraper = RECAScraperAgent(model_router)
         
         # System state
         self.is_running = False
@@ -169,7 +171,7 @@ class OrchestraOrchestrator:
         
         # Route to architecture designer
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="refine_design",
             message_type=MessageType.DESIGN_COMPLETED,
@@ -322,12 +324,18 @@ class OrchestraOrchestrator:
             "capabilities": ["design_validation", "safety_checking"],
             "max_concurrent_tasks": 3
         })
+        
+        await self.router.register_agent("reca_scraper", {
+            "message_types": ["scrape_request", "scrape_completed"],
+            "capabilities": ["web_scraping", "reca_extraction"],
+            "max_concurrent_tasks": 2
+        })
     
     async def _start_requirements_extraction(self, session_id: UUID) -> None:
         """Start the requirements extraction process."""
         
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="start_requirements_extraction",
             message_type=MessageType.QUESTION_ASKED,
@@ -341,7 +349,7 @@ class OrchestraOrchestrator:
         """Handle user input during requirements extraction."""
         
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="process_answer",
             message_type=MessageType.QUESTION_ANSWERED,
@@ -351,7 +359,10 @@ class OrchestraOrchestrator:
         
         await self.router.route_message(message)
         
-        return {"status": "processing_requirements"}
+        return {
+            "status": "processing_requirements",
+            "message": "Processing your requirements. Please wait..."
+        }
     
     async def _handle_design_refinement(self, session_id: UUID, user_input: str) -> Dict[str, Any]:
         """Handle user input during design refinement."""
@@ -405,6 +416,9 @@ class OrchestraOrchestrator:
                 await self._start_validation(message.session_id)
             elif message.message_type == MessageType.VALIDATION_COMPLETED:
                 await self.context_manager.update_session_phase(message.session_id, "complete")
+            elif message.message_type == MessageType.SCRAPE_COMPLETED:
+                logger.info(f"Scrape completed for session {message.session_id}")
+                # Potentially update session context or notify user
             elif message.message_type == MessageType.ERROR_OCCURRED:
                 logger.error(f"Agent error: {message.payload.get('error_message')}")
             
@@ -415,7 +429,7 @@ class OrchestraOrchestrator:
         """Start repository analysis."""
         
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="analyze_repository",
             message_type=MessageType.REPO_ANALYSIS_REQUESTED,
@@ -433,7 +447,7 @@ class OrchestraOrchestrator:
         patterns = session["context"]["repository_analysis"]
         
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="design_orchestra",
             message_type=MessageType.DESIGN_REQUESTED,
@@ -453,7 +467,7 @@ class OrchestraOrchestrator:
         design = session["context"]["orchestra_design"]
         
         message = AgentMessage(
-            correlation_id=UUID(),
+            correlation_id=uuid4(),
             agent_id="orchestrator",
             intent="create_implementation_plan",
             message_type=MessageType.PLAN_REQUESTED,

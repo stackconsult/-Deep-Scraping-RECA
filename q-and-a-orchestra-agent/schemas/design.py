@@ -115,7 +115,7 @@ class OrchestraDesign(BaseModel):
     deployment_pattern: str = "microservices"
     
     # Safety & reliability
-    safety_mechanisms: List[SafetyMechanism] = Field(default_factory=dict)
+    safety_mechanisms: List[SafetyMechanism] = Field(default_factory=list)
     error_handling_strategy: Dict[str, Any] = Field(default_factory=dict)
     monitoring_setup: Dict[str, Any] = Field(default_factory=dict)
     

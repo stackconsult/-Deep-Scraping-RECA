@@ -72,6 +72,11 @@ class MessageRouter:
         """
         try:
             routed_agents = []
+            # Determine the string value of the message type
+            type_str = message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type)
+            priority_str = message.priority.value if hasattr(message.priority, 'value') else str(message.priority)
+            
+            logger.debug(f"Applying rules for {type_str} with priority {priority_str}")
             
             # Update workflow state
             await self._update_workflow_state(message)
@@ -93,9 +98,15 @@ class MessageRouter:
                 # Update agent task count
                 if agent_id in self.agent_registry:
                     self.agent_registry[agent_id]["current_tasks"] += 1
+                
+                # Update agents_involved in workflow state
+                if message.correlation_id in self.workflow_states:
+                    self.workflow_states[message.correlation_id]["agents_involved"].add(agent_id)
             
             # Log routing
             logger.info(f"Routed message {message.message_id} to agents: {routed_agents}")
+            if not routed_agents:
+                logger.warning(f"Message {message.message_id} ({type_str}) was NOT routed to any agents. Target agents were: {target_agents}")
             
             return routed_agents
             
@@ -264,13 +275,15 @@ class MessageRouter:
             return True
         
         elif condition_type == "message_type":
-            return message.message_type.value in condition.get("values", [])
+            type_val = message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type)
+            return type_val in condition.get("values", [])
         
         elif condition_type == "agent_id":
             return message.agent_id in condition.get("values", [])
         
         elif condition_type == "priority":
-            return message.priority.value in condition.get("values", [])
+            priority_val = message.priority.value if hasattr(message.priority, 'value') else str(message.priority)
+            return priority_val in condition.get("values", [])
         
         elif condition_type == "session_exists":
             return message.session_id is not None
@@ -291,12 +304,15 @@ class MessageRouter:
             logger.warning(f"Unknown condition type: {condition_type}")
             return False
     
-    def _get_agents_for_message_type(self, message_type: MessageType) -> List[str]:
+    def _get_agents_for_message_type(self, message_type: Any) -> List[str]:
         """Get agents that can handle a specific message type."""
         capable_agents = []
         
+        # Determine the string value of the message type
+        type_str = message_type.value if hasattr(message_type, 'value') else str(message_type)
+        
         for agent_id, agent_info in self.agent_registry.items():
-            if message_type.value in agent_info["message_types"]:
+            if type_str in agent_info["message_types"]:
                 capable_agents.append(agent_id)
         
         return capable_agents
@@ -366,16 +382,20 @@ class MessageRouter:
         # Update workflow state
         state = self.workflow_states[correlation_id]
         state["last_updated"] = datetime.utcnow()
+        
+        # Determine the string value of the message type
+        type_str = message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type)
+        
         state["messages"].append({
             "message_id": message.message_id,
             "agent_id": message.agent_id,
-            "message_type": message.message_type.value,
+            "message_type": type_str,
             "timestamp": message.timestamp
         })
         state["agents_involved"].add(message.agent_id)
         
         # Update phase based on message types
-        if message.message_type == MessageType.REQUIREMENTS_EXTRACTED:
+        if type_str == MessageType.REQUIREMENTS_EXTRACTED:
             state["current_phase"] = "requirements_complete"
         elif message.message_type == MessageType.DESIGN_COMPLETED:
             state["current_phase"] = "design_complete"
@@ -455,7 +475,18 @@ class MessageRouter:
             "priority": {"type": "high"}
         })
         
-        # Rule 7: Route session messages to all agents in session
+        # Rule 7: Route scraping messages
+        self.routing_rules.append({
+            "name": "scraping_routing",
+            "condition": {
+                "type": "message_type",
+                "values": ["scrape_request", "scrape_completed"]
+            },
+            "target_agents": ["reca_scraper"],
+            "priority": {"type": "none"}
+        })
+        
+        # Rule 8: Route session messages to all agents in session
         self.routing_rules.append({
             "name": "session_routing",
             "condition": {

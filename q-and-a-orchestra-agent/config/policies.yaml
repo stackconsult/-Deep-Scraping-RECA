@@ -35,28 +35,35 @@ routing:
 task_overrides:
   # Prefer tiny local models for routing/critics
   routing:
-    preferred_providers: [ollama]
+    preferred_providers: [ollama, google]
     preferred_capabilities: [routing, classification, critic]
   critic:
-    preferred_providers: [ollama]
+    preferred_providers: [ollama, google]
     preferred_capabilities: [critic, routing]
   qa:
+    preferred_providers: [google]
     preferred_capabilities: [general_qa, complex_qa]
   planning:
+    preferred_providers: [google]
     preferred_capabilities: [planning, multi_agent_orchestration]
+  scraping:
+    preferred_providers: [google]
+    preferred_capabilities: [scraping, vision]
 
 budgets:
   # Rough limits; cost profile is approximate.
   daily:
     total_usd: 10.0
     per_provider:
-      openai: 5.0
-      anthropic: 5.0
+      openai: 2.0
+      anthropic: 2.0
+      google: 10.0
   monthly:
     total_usd: 150.0
     per_provider:
-      openai: 75.0
-      anthropic: 75.0
+      openai: 20.0
+      anthropic: 20.0
+      google: 100.0
 
 behavior_on_budget_exceeded:
   # downgrade_to_local | hard_block | warn_only

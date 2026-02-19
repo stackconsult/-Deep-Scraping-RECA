@@ -7,7 +7,8 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
+from core.task_profiles import TaskProfile
 from schemas.messages import AgentMessage, MessageType, DesignPayload
 from schemas.design import (
     OrchestraDesign, AgentDefinition, MessageFlow, AgentType, 
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 class ArchitectureDesignerAgent:
     """Designs agent orchestras based on requirements and repository patterns."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter):
+        self.router = model_router
         self.agent_id = "architecture_designer"
         
         # Design templates for common patterns
@@ -184,13 +185,19 @@ class ArchitectureDesignerAgent:
         """
         
         try:
-            response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=100,
+            task = TaskProfile(
+                task_type="routing",
+                criticality="low",
+                context_size=len(prompt),
+                metadata={"purpose": "determine_design_approach"}
+            )
+            
+            result = await self.router.select_and_invoke(
+                task=task,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            approach = response.content[0].text.strip().lower()
+            approach = result["content"].strip().lower()
             return approach if approach in self._design_templates else "custom"
             
         except Exception as e:
@@ -258,17 +265,23 @@ class ArchitectureDesignerAgent:
         """
         
         try:
-            response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=2000,
+            task = TaskProfile(
+                task_type="planning",
+                criticality="medium",
+                context_size=len(prompt),
+                metadata={"purpose": "generate_custom_agents"}
+            )
+            
+            result = await self.router.select_and_invoke(
+                task=task,
                 messages=[{"role": "user", "content": prompt}]
             )
             
             # Parse and create agents
             # In production, implement proper JSON parsing
             agents = {}
-            
-            # Create a basic set of agents for now
+            # (Keeping the fallback logic or parsing logic here)
+            content = result["content"]
             agents["coordinator"] = AgentDefinition(
                 agent_id="coordinator",
                 agent_name="Orchestra Coordinator",

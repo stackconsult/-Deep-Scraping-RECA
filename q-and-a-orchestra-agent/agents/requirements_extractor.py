@@ -7,7 +7,8 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
+from core.task_profiles import TaskProfile
 from schemas.messages import AgentMessage, MessageType, RequirementsPayload
 from schemas.requirements import (
     UserRequirements, RequirementsExtractionSession, 
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 class RequirementsExtractorAgent:
     """Extracts requirements from users through conversational Q&A."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter):
+        self.router = model_router
         self.agent_id = "requirements_extractor"
         
         # Active sessions
@@ -298,15 +299,24 @@ class RequirementsExtractorAgent:
         """
         
         try:
-            response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=1500,
+            task = TaskProfile(
+                task_type="qa",
+                criticality="medium",
+                context_size=len(prompt),
+                metadata={"purpose": "requirements_generation"}
+            )
+            
+            result = await self.router.select_and_invoke(
+                task=task,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            # Parse Claude's response and create requirements
+            # Parse response
+            content = result["content"]
+            
+            # Create requirements document
             # In production, implement proper JSON parsing
-            structured_data = {"analysis": response.content[0].text}
+            structured_data = {"analysis": content}
             
             # Create requirements document
             requirements = UserRequirements(
@@ -353,14 +363,20 @@ class RequirementsExtractorAgent:
         """
         
         try:
-            response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=500,
+            task = TaskProfile(
+                task_type="qa",
+                criticality="low",
+                context_size=len(prompt),
+                metadata={"purpose": "clarifying_questions"}
+            )
+            
+            result = await self.router.select_and_invoke(
+                task=task,
                 messages=[{"role": "user", "content": prompt}]
             )
             
             # Parse questions from response
-            content = response.content[0].text
+            content = result["content"]
             # Simple parsing - in production, use more sophisticated parsing
             questions = [q.strip() for q in content.split('\n') if q.strip() and '?' in q]
             return questions[:5]  # Limit to 5 questions

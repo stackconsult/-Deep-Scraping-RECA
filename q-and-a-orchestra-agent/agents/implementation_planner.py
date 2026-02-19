@@ -7,18 +7,19 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from anthropic import AsyncAnthropic
-from schemas.messages import AgentMessage, MessageType, ImplementationPlanPayload
-from schemas.design import OrchestraDesign
+from core.model_router import ModelRouter
+from schemas.messages import AgentMessage, MessageType, ImplementationPlanPayload, ValidationPayload
+from schemas.design import OrchestraDesign, ORCHESTRA_VALIDATION_RULES, ValidationResult
 
 logger = logging.getLogger(__name__)
+
 
 
 class ImplementationPlannerAgent:
     """Creates detailed implementation plans for agent orchestras."""
     
-    def __init__(self, anthropic_client: AsyncAnthropic):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter):
+        self.router = model_router
         self.agent_id = "implementation_planner"
         
         # Cost estimation constants

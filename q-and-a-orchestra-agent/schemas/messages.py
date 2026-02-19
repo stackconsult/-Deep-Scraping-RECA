@@ -2,7 +2,7 @@
 Message schemas for agent communication.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
@@ -38,6 +38,10 @@ class MessageType(str, Enum):
     VALIDATION_COMPLETED = "validation_completed"
     SAFETY_CHECK_COMPLETED = "safety_check_completed"
     
+    # Scraping
+    SCRAPE_REQUEST = "scrape_request"
+    SCRAPE_COMPLETED = "scrape_completed"
+    
     # System
     ERROR_OCCURRED = "error_occurred"
     SESSION_STARTED = "session_started"
@@ -57,7 +61,7 @@ class AgentMessage(BaseModel):
     
     message_id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID = Field(default_factory=uuid4)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     agent_id: str
     intent: str
     message_type: MessageType
@@ -143,4 +147,14 @@ class SessionPayload(BaseModel):
     session_id: UUID
     user_id: Optional[str] = None
     session_type: str = "design"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ScrapingPayload(BaseModel):
+    """Payload for scraping-related messages."""
+    
+    search_params: Dict[str, Any] = Field(default_factory=dict)
+    deep_scrape: bool = False
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)

@@ -300,7 +300,7 @@ def log_agent_message(logger: ContextLogger):
                 bound_logger = logger.bind(
                     message_id=str(message.message_id),
                     agent_id=message.agent_id,
-                    message_type=message.message_type.value,
+                    message_type=message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type),
                     correlation_id=str(message.correlation_id)
                 )
             

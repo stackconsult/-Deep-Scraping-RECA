@@ -5,7 +5,7 @@ providers:
   ollama:
     type: local
     base_url: http://localhost:11434
-    discover: true        # try /api/tags to auto-merge models
+    discover: true # try /api/tags to auto-merge models
     models:
       - id: llama3-8b-instruct
         display_name: "Llama 3 8B Instruct"
@@ -40,7 +40,7 @@ providers:
   # OpenAI-compatible "generic" clouds (Moonshot, LM Studio cloud, etc.)
   generic_openai:
     type: cloud
-    base_url_env: GENERIC_OPENAI_BASE_URL   # e.g. https://dashscope.aliyuncs.com/...
+    base_url_env: GENERIC_OPENAI_BASE_URL # e.g. https://dashscope.aliyuncs.com/...
     api_key_env: GENERIC_OPENAI_API_KEY
     models:
       - id: moonshot-v1-8k
@@ -87,3 +87,44 @@ providers:
           currency: USD
           input_per_1k: 3.0
           output_per_1k: 15.0
+
+  google:
+    type: cloud
+    api_key_env: GOOGLE_API_KEY
+    models:
+      - id: gemini-1.5-pro
+        display_name: "Gemini 1.5 Pro"
+        capabilities:
+          [planning, multi_agent_orchestration, complex_qa, coding, vision]
+        max_context: 2000000
+        quality_tier: very_high
+        latency_tier: medium
+        cost_profile:
+          type: paid
+          currency: USD
+          input_per_1k: 3.5
+          output_per_1k: 10.5
+
+      - id: gemini-1.5-flash
+        display_name: "Gemini 1.5 Flash"
+        capabilities: [general_qa, planning, summarization, tool_use_light]
+        max_context: 1000000
+        quality_tier: high
+        latency_tier: low
+        cost_profile:
+          type: paid
+          currency: USD
+          input_per_1k: 0.075
+          output_per_1k: 0.3
+
+      - id: gemini-2.0-flash
+        display_name: "Gemini 2.0 Flash"
+        capabilities: [tool_use, general_qa, coding, vision, scraping]
+        max_context: 1000000
+        quality_tier: high
+        latency_tier: low
+        cost_profile:
+          type: paid
+          currency: USD
+          input_per_1k: 0.0001
+          output_per_1k: 0.0004

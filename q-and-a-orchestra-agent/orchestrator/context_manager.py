@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from schemas.messages import AgentMessage, MessageType
 from schemas.requirements import UserRequirements, RequirementsExtractionSession
@@ -36,7 +36,7 @@ class ContextManager:
         Returns:
             Session ID
         """
-        session_id = UUID()
+        session_id = uuid4()
         
         session = {
             "session_id": session_id,
@@ -419,6 +419,18 @@ class ContextManager:
         """
         return self.user_preferences.get(user_id, {})
     
+    async def end_session(self, session_id: UUID) -> None:
+        """
+        End a session.
+        
+        Args:
+            session_id: Session ID
+        """
+        if session_id in self.sessions:
+            self.sessions[session_id]["status"] = "ended"
+            self.sessions[session_id]["last_activity"] = datetime.utcnow()
+            logger.info(f"Ended session {session_id}")
+            
     async def cleanup_expired_sessions(self) -> int:
         """
         Clean up sessions that have expired.

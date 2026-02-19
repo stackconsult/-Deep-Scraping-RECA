@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from uuid import UUID
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
 
 from orchestrator.orchestrator import OrchestraOrchestrator
 from integrations.repo_reader import UnifiedRepositoryReader
@@ -37,12 +37,8 @@ async def lifespan(app: FastAPI):
     
     # Startup
     try:
-        # Initialize Anthropic client
-        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not anthropic_api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required")
-        
-        anthropic_client = AsyncAnthropic(api_key=anthropic_api_key)
+        # Initialize Model Router
+        model_router = ModelRouter()
         
         # Initialize repository reader
         repo_reader = UnifiedRepositoryReader(
@@ -54,7 +50,7 @@ async def lifespan(app: FastAPI):
         
         # Initialize orchestrator
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        orchestrator = OrchestraOrchestrator(anthropic_client, redis_url)
+        orchestrator = OrchestraOrchestrator(model_router, redis_url)
         
         # Connect to services
         await repo_reader.connect()

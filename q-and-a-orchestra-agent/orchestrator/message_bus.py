@@ -65,6 +65,26 @@ class MessageBus:
             
             logger.debug(f"Published message to {channel}")
             
+            # Direct trigger for local subscribers (useful for testing and low-intensity local workflows)
+            # In a full distributed setup, a separate listener would handle this
+            if message.agent_id in self.subscribers:
+                for callback in self.subscribers[message.agent_id]:
+                    # Create task for async callbacks
+                    if asyncio.iscoroutinefunction(callback):
+                        asyncio.get_event_loop().create_task(callback(message))
+                    else:
+                        callback(message)
+            
+            # Trigger for type-based subscribers
+            type_str = message.message_type.value if hasattr(message.message_type, 'value') else str(message.message_type)
+            type_channel = f"type:{type_str}"
+            if type_channel in self.subscribers:
+                for callback in self.subscribers[type_channel]:
+                    if asyncio.iscoroutinefunction(callback):
+                        asyncio.get_event_loop().create_task(callback(message))
+                    else:
+                        callback(message)
+            
         except Exception as e:
             logger.error(f"Failed to publish message: {str(e)}")
             # Add to dead letter queue

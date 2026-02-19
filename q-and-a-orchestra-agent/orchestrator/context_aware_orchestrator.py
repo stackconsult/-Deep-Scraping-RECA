@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 from datetime import datetime
 
-from anthropic import AsyncAnthropic
+from core.model_router import ModelRouter
 
 # Import context engineering
 from context_engineering.models import ContextEnvelope
@@ -37,8 +37,8 @@ class ContextAwareOrchestrator:
     to drive agent selection and execution.
     """
     
-    def __init__(self, anthropic_client: AsyncAnthropic, redis_url: str = "redis://localhost:6379/0"):
-        self.anthropic = anthropic_client
+    def __init__(self, model_router: ModelRouter, redis_url: str = "redis://localhost:6379/0"):
+        self.router_client = model_router
         
         # Core components
         self.message_bus = MessageBus(redis_url)
@@ -47,11 +47,11 @@ class ContextAwareOrchestrator:
         self.conversation_memory = ConversationMemory(self.context_manager)
         
         # Agents
-        self.repository_analyzer = RepositoryAnalyzerAgent(anthropic_client, self)
-        self.requirements_extractor = RequirementsExtractorAgent(anthropic_client)
-        self.architecture_designer = ArchitectureDesignerAgent(anthropic_client)
-        self.implementation_planner = ImplementationPlannerAgent(anthropic_client)
-        self.validator = ValidatorAgent(anthropic_client)
+        self.repository_analyzer = RepositoryAnalyzerAgent(model_router, self)
+        self.requirements_extractor = RequirementsExtractorAgent(model_router)
+        self.architecture_designer = ArchitectureDesignerAgent(model_router)
+        self.implementation_planner = ImplementationPlannerAgent(model_router)
+        self.validator = ValidatorAgent(model_router)
         
         # System state
         self.is_running = False

@@ -12,6 +12,7 @@ from providers.ollama_client import OllamaClient
 from providers.openai_client import OpenAIClient
 from providers.anthropic_client import AnthropicClient
 from providers.generic_openai_client import GenericOpenAIClient
+from providers.google_client import GoogleClient
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +26,35 @@ class ModelRouter:
         self.policy_engine = ModelPolicyEngine(self.registry)
         self.telemetry = Telemetry()
         
-        # Initialize provider clients
-        self.clients: Dict[str, BaseModelClient] = {
-            "ollama": OllamaClient(),
-            "openai": OpenAIClient(),
-            "anthropic": AnthropicClient(),
-            "generic_openai": GenericOpenAIClient(),
+        # Initialize provider clients lazily
+        self._clients: Dict[str, Optional[BaseModelClient]] = {
+            "ollama": None,
+            "openai": None,
+            "anthropic": None,
+            "generic_openai": None,
+            "google": None,
         }
         
         logger.info(f"ModelRouter initialized with dry_run={dry_run}")
     
     def _client_for(self, provider_name: str) -> BaseModelClient:
-        """Get the appropriate client for a provider."""
-        if provider_name not in self.clients:
+        """Get the appropriate client for a provider, initializing it if needed."""
+        if provider_name not in self._clients:
             raise RuntimeError(f"No client configured for provider {provider_name}")
-        return self.clients[provider_name]
+            
+        if self._clients[provider_name] is None:
+            if provider_name == "ollama":
+                self._clients[provider_name] = OllamaClient()
+            elif provider_name == "openai":
+                self._clients[provider_name] = OpenAIClient()
+            elif provider_name == "anthropic":
+                self._clients[provider_name] = AnthropicClient()
+            elif provider_name == "generic_openai":
+                self._clients[provider_name] = GenericOpenAIClient()
+            elif provider_name == "google":
+                self._clients[provider_name] = GoogleClient()
+                
+        return self._clients[provider_name]
     
     def plan(self, task: TaskProfile) -> Optional[ScoredModel]:
         """Return the selected model + reasons, no invocation."""

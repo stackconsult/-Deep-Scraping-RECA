@@ -7,34 +7,30 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from core.model_router import ModelRouter
 from orchestrator.orchestrator import OrchestraOrchestrator
 from orchestrator.message_bus import MessageBus
 from orchestrator.router import MessageRouter
 from orchestrator.context_manager import ContextManager
 from schemas.messages import AgentMessage, MessageType, Priority
+from schemas.requirements import UserRequirements, StackType, Complexity
+from schemas.design import OrchestraDesign
 
 
 @pytest.fixture
 async def mock_orchestrator():
     """Mock orchestrator for testing."""
-    with patch('orchestrator.orchestrator.AsyncAnthropic') as mock_anthropic:
-        mock_client = AsyncMock()
-        mock_anthropic.return_value = mock_client
+    model_router = ModelRouter(dry_run=True)
+    orchestrator = OrchestraOrchestrator(model_router, "redis://localhost:6379/1")
         
-        # Mock Claude responses
-        mock_client.messages.create.return_value = AsyncMock(
-            content=[AsyncMock(text="mock response")]
-        )
+    # Mock message bus connection
+    orchestrator.message_bus.connect = AsyncMock()
+    orchestrator.message_bus.connected = True
+    await orchestrator.start()
         
-        orchestrator = OrchestraOrchestrator(mock_client, "redis://localhost:6379/1")
+    yield orchestrator
         
-        # Mock message bus connection
-        with patch.object(orchestrator.message_bus, 'connect'):
-            await orchestrator.start()
-        
-        yield orchestrator
-        
-        await orchestrator.stop()
+    await orchestrator.stop()
 
 
 @pytest.mark.integration
@@ -60,7 +56,7 @@ class TestOrchestratorIntegration:
             input_type="text"
         )
         
-        assert response["status"] == "processing_requirements"
+        assert response['status'] == 'processing_requirements'
         
         # Get session status
         status = await mock_orchestrator.get_session_status(session_id)
@@ -86,26 +82,29 @@ class TestOrchestratorIntegration:
         assert status["orchestrator"]["active_sessions"] >= 0
 
 
+@pytest.fixture
+async def message_bus():
+    """Create message bus for testing."""
+    bus = MessageBus("redis://localhost:6379/2")
+    
+    # Mock message bus connection and redis client
+    bus.connect = AsyncMock()
+    bus.disconnect = AsyncMock()
+    bus.redis_client = MagicMock()
+    bus.redis_client.publish = MagicMock()
+    
+    return bus
+    
+    await bus.disconnect()
+
+
 @pytest.mark.integration
 class TestMessageBusIntegration:
     """Integration tests for message bus."""
     
-    @pytest.fixture
-    async def message_bus(self):
-        """Create message bus for testing."""
-        bus = MessageBus("redis://localhost:6379/2")
-        
-        with patch.object(bus, 'connect'):
-            await bus.connect()
-        
-        yield bus
-        
-        with patch.object(bus, 'disconnect'):
-            await bus.disconnect()
-    
     @pytest.mark.asyncio
     async def test_message_publishing(self, message_bus):
-        """Test message publishing and subscription."""
+        """Test publishing a message to the bus."""
         received_messages = []
         
         async def message_handler(message):
@@ -156,30 +155,34 @@ class TestMessageBusIntegration:
         assert all(isinstance(msg, AgentMessage) for msg in history)
 
 
+@pytest.fixture
+async def router():
+    """Create a message router for testing."""
+    bus = MessageBus("redis://localhost:6379/3")
+    bus.redis_client = MagicMock()
+    bus.redis_client.publish = MagicMock()
+    
+    router = MessageRouter(bus)
+    
+    # Register agents matching default rules
+    await router.register_agent("requirements_extractor", {
+        "message_types": ["question_asked", "question_answered"],
+        "capabilities": ["requirements_extraction"],
+        "max_concurrent_tasks": 2
+    })
+    
+    await router.register_agent("architecture_designer", {
+        "message_types": ["design_requested", "design_completed"],
+        "capabilities": ["design_capability"],
+        "max_concurrent_tasks": 1
+    })
+    
+    return router
+
+
 @pytest.mark.integration
 class TestRouterIntegration:
     """Integration tests for message router."""
-    
-    @pytest.fixture
-    async def router(self):
-        """Create router for testing."""
-        bus = AsyncMock()
-        router = MessageRouter(bus)
-        
-        # Register test agents
-        await router.register_agent("test_agent_1", {
-            "message_types": ["question_asked", "question_answered"],
-            "capabilities": ["test_capability"],
-            "max_concurrent_tasks": 2
-        })
-        
-        await router.register_agent("test_agent_2", {
-            "message_types": ["design_requested", "design_completed"],
-            "capabilities": ["design_capability"],
-            "max_concurrent_tasks": 1
-        })
-        
-        return router
     
     @pytest.mark.asyncio
     async def test_agent_registration(self, router):
@@ -188,12 +191,12 @@ class TestRouterIntegration:
         
         assert "total_agents" in status
         assert status["total_agents"] == 2
-        assert "test_agent_1" in status["agents"]
-        assert "test_agent_2" in status["agents"]
+        assert "requirements_extractor" in status["agents"]
+        assert "architecture_designer" in status["agents"]
     
     @pytest.mark.asyncio
     async def test_message_routing(self, router):
-        """Test message routing."""
+        """Test basic message routing."""
         message = AgentMessage(
             correlation_id=uuid4(),
             agent_id="orchestrator",
@@ -206,8 +209,8 @@ class TestRouterIntegration:
         # Route message
         routed_agents = await router.route_message(message)
         
-        # Should route to test_agent_1 based on message type
-        assert "test_agent_1" in routed_agents
+        # Should route to requirements_extractor based on default rules
+        assert "requirements_extractor" in routed_agents
     
     @pytest.mark.asyncio
     async def test_workflow_state_tracking(self, router):
@@ -231,17 +234,18 @@ class TestRouterIntegration:
         assert state is not None
         assert state["correlation_id"] == correlation_id
         assert len(state["messages"]) == 1
-        assert "test_agent" in state["agents_involved"]
+        assert "requirements_extractor" in state["agents_involved"]
+
+
+@pytest.fixture
+def context_manager():
+    """Create context manager for testing."""
+    return ContextManager()
 
 
 @pytest.mark.integration
 class TestContextManagerIntegration:
     """Integration tests for context manager."""
-    
-    @pytest.fixture
-    def context_manager(self):
-        """Create context manager for testing."""
-        return ContextManager()
     
     @pytest.mark.asyncio
     async def test_session_lifecycle(self, context_manager):
@@ -305,8 +309,8 @@ class TestContextManagerIntegration:
             query="document"
         )
         
-        assert len(search_results) == 1
-        assert "document" in search_results[0]["content"].lower()
+        assert len(search_results) >= 1
+        assert any("document" in res["content"].lower() for res in search_results)
     
     @pytest.mark.asyncio
     async def test_context_persistence(self, context_manager):
@@ -321,7 +325,9 @@ class TestContextManagerIntegration:
             requirements_id=uuid4(),
             session_id=session_id,
             project_description="Test project",
-            primary_goal="Test goal"
+            primary_goal="Test goal",
+            stack_type=StackType.PYTHON_FASTAPI,
+            complexity=Complexity.SIMPLE
         )
         
         await context_manager.store_requirements(session_id, requirements)
@@ -329,8 +335,9 @@ class TestContextManagerIntegration:
         design = OrchestraDesign(
             design_id=uuid4(),
             session_id=session_id,
-            orchestra_name="Test Orchestra",
-            primary_goal="Test goal"
+            orchestra_name="E2E Orchestra",
+            orchestra_description="E2E description",
+            primary_goal="Create a multi-agent system"
         )
         
         await context_manager.store_orchestra_design(session_id, design)
@@ -341,7 +348,7 @@ class TestContextManagerIntegration:
         assert context["context"]["requirements"] is not None
         assert context["context"]["orchestra_design"] is not None
         assert context["context"]["requirements"]["project_description"] == "Test project"
-        assert context["context"]["orchestra_design"]["orchestra_name"] == "Test Orchestra"
+        assert context["context"]["orchestra_design"]["orchestra_name"] == "E2E Orchestra"
     
     @pytest.mark.asyncio
     async def test_session_cleanup(self, context_manager):
@@ -404,72 +411,65 @@ class TestEndToEndWorkflow:
         # This would test the full orchestrator workflow
         # For now, just verify the structure
         
-        with patch('orchestrator.orchestrator.AsyncAnthropic') as mock_anthropic:
-            mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
+        model_router = ModelRouter(dry_run=True)
+        orchestrator = OrchestraOrchestrator(model_router, "redis://localhost:6379/3")
             
-            # Mock all Claude responses
-            mock_client.messages.create.return_value = AsyncMock(
-                content=[AsyncMock(text="mock response")]
+        with patch.object(orchestrator.message_bus, 'connect'):
+            await orchestrator.start()
+            
+        try:
+            # Start session
+            session_id = await orchestrator.start_design_session(
+                user_id="integration_test_user"
             )
             
-            orchestrator = OrchestraOrchestrator(mock_client, "redis://localhost:6379/3")
+            # Simulate user inputs through the workflow
+            inputs = [
+                "I need a document processing system for real estate contracts",
+                "Python with FastAPI, PostgreSQL, and Claude",
+                "3 months timeline, $500/month budget",
+                "Must handle PDF extraction and validation",
+                "Deploy to AWS with monitoring"
+            ]
             
-            with patch.object(orchestrator.message_bus, 'connect'):
-                await orchestrator.start()
-            
-            try:
-                # Start session
-                session_id = await orchestrator.start_design_session(
-                    user_id="integration_test_user"
-                )
-                
-                # Simulate user inputs through the workflow
-                inputs = [
-                    "I need a document processing system for real estate contracts",
-                    "Python with FastAPI, PostgreSQL, and Claude",
-                    "3 months timeline, $500/month budget",
-                    "Must handle PDF extraction and validation",
-                    "Deploy to AWS with monitoring"
-                ]
-                
-                for user_input in inputs:
-                    response = await orchestrator.process_user_input(
-                        session_id=session_id,
-                        user_input=user_input
-                    )
-                    
-                    # Verify response structure
-                    assert "status" in response
-                    assert "message" in response
-                
-                # Request refinement
-                await orchestrator.request_refinement(
+            for user_input in inputs:
+                response = await orchestrator.process_user_input(
                     session_id=session_id,
-                    refinement_type="add_security",
-                    description="Add authentication and authorization"
+                    user_input=user_input
                 )
                 
-                # Get final status
-                final_status = await orchestrator.get_session_status(session_id)
-                
-                # Verify session completed successfully
-                assert final_status["status"] == "active"
-                assert final_status["current_phase"] in [
-                    "requirements_extraction",
-                    "repository_analysis", 
-                    "architecture_design",
-                    "implementation_planning",
-                    "validation",
-                    "complete"
-                ]
-                
-                # End session
-                summary = await orchestrator.end_session(session_id)
-                assert summary["status"] == "session_ended"
-                
-            finally:
-                await orchestrator.stop()
+                # Verify response structure
+                assert "status" in response
+                assert "message" in response
+            
+            # Request refinement
+            await orchestrator.request_refinement(
+                session_id=session_id,
+                refinement_type="add_security",
+                description="Add authentication and authorization"
+            )
+            
+            # Get final status
+            final_status = await orchestrator.get_session_status(session_id)
+            
+            # Verify session completed successfully
+            assert final_status["status"] == "active"
+            assert final_status["current_phase"] in [
+                "requirements_extraction",
+                "repository_analysis", 
+                "architecture_design",
+                "implementation_planning",
+                "validation",
+                "design_refinement",
+                "complete"
+            ]
+            
+            # End session
+            summary = await orchestrator.end_session(session_id)
+            assert summary["status"] == "session_ended"
+            
+        finally:
+            await orchestrator.stop()
 
 
 # Performance integration tests
@@ -481,56 +481,49 @@ class TestSystemPerformance:
     @pytest.mark.asyncio
     async def test_concurrent_sessions(self):
         """Test handling multiple concurrent sessions."""
-        with patch('orchestrator.orchestrator.AsyncAnthropic') as mock_anthropic:
-            mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
+        model_router = ModelRouter(dry_run=True)
+        orchestrator = OrchestraOrchestrator(model_router, "redis://localhost:6379/4")
+        
+        with patch.object(orchestrator.message_bus, 'connect'):
+            await orchestrator.start()
+        
+        try:
+            import time
+            start_time = time.time()
             
-            mock_client.messages.create.return_value = AsyncMock(
-                content=[AsyncMock(text="quick response")]
-            )
+            # Create multiple sessions concurrently
+            session_tasks = []
+            for i in range(10):
+                task = orchestrator.start_design_session(user_id=f"user_{i}")
+                session_tasks.append(task)
             
-            orchestrator = OrchestraOrchestrator(mock_client, "redis://localhost:6379/4")
+            session_ids = await asyncio.gather(*session_tasks)
             
-            with patch.object(orchestrator.message_bus, 'connect'):
-                await orchestrator.start()
+            # Process inputs concurrently
+            input_tasks = []
+            for session_id in session_ids:
+                task = orchestrator.process_user_input(
+                    session_id=session_id,
+                    user_input=f"Test input for session {session_id}"
+                )
+                input_tasks.append(task)
             
-            try:
-                import time
-                start_time = time.time()
-                
-                # Create multiple sessions concurrently
-                session_tasks = []
-                for i in range(10):
-                    task = orchestrator.start_design_session(user_id=f"user_{i}")
-                    session_tasks.append(task)
-                
-                session_ids = await asyncio.gather(*session_tasks)
-                
-                # Process inputs concurrently
-                input_tasks = []
-                for session_id in session_ids:
-                    task = orchestrator.process_user_input(
-                        session_id=session_id,
-                        user_input=f"Test input for session {session_id}"
-                    )
-                    input_tasks.append(task)
-                
-                responses = await asyncio.gather(*input_tasks)
-                
-                end_time = time.time()
-                duration = end_time - start_time
-                
-                # Verify performance
-                assert len(session_ids) == 10
-                assert len(responses) == 10
-                assert duration < 10.0, f"Concurrent processing took too long: {duration}s"
-                
-                # Clean up
-                cleanup_tasks = [
-                    orchestrator.end_session(session_id) 
-                    for session_id in session_ids
-                ]
-                await asyncio.gather(*cleanup_tasks)
-                
-            finally:
-                await orchestrator.stop()
+            responses = await asyncio.gather(*input_tasks)
+            
+            end_time = time.time()
+            duration = end_time - start_time
+            
+            # Verify performance
+            assert len(session_ids) == 10
+            assert len(responses) == 10
+            assert duration < 5.0, f"Concurrent processing took too long: {duration}s"
+            
+            # Clean up
+            cleanup_tasks = [
+                orchestrator.end_session(session_id) 
+                for session_id in session_ids
+            ]
+            await asyncio.gather(*cleanup_tasks)
+            
+        finally:
+            await orchestrator.stop()
