@@ -1,0 +1,25 @@
+# Lightweight Dockerfile for RECA Scraper Cloud Run Service
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install only scraper dependencies
+COPY scripts/requirements.scraper.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy only the files needed for scraping
+COPY integrations/ integrations/
+COPY scripts/full_sweep.py scripts/full_sweep.py
+COPY scripts/cloud_scraper.py scripts/cloud_scraper.py
+COPY scripts/validate_data.py scripts/validate_data.py
+COPY scripts/db_ingest.py scripts/db_ingest.py
+
+# Create data directory
+RUN mkdir -p data
+
+EXPOSE 8080
+
+CMD ["python", "scripts/cloud_scraper.py"]
