@@ -1,381 +1,213 @@
-# Agent Orchestra Production Build
+# Q&A Orchestra Agent + Deep Scraping RECA
 
-**Enterprise-grade multi-agent orchestration system with intelligent LLM routing and comprehensive security.**
+A production-grade meta-agent system for designing agent orchestras through conversational Q&A — plus a high-performance Alberta real estate agent scraper powered by RECA.
 
-A production-ready system that orchestrates specialized AI agents for software development tasks, featuring intelligent model routing, multi-tenancy, budget management, and enterprise-grade security controls.
+## 📊 Current Build Status
+
+### ✅ Completed Components
+- **Surface Scrape**: Complete (18,832 agents found)
+- **Database Schema**: Built (`migrations/002_enhanced_schema.sql`)
+- **Ingestion Script**: Built (`scripts/db_ingest.py`)
+- **Incremental Scraper**: Built (`scripts/incremental_scraper.py`)
+- **Cloud Scraper**: Built (`scripts/cloud_scraper.py`)
+
+### ⚠️ In Progress / Issues Identified
+- **Deep Scrape**: Complete but flawed - 0% extraction rate for both phones and emails
+- **Progress**: 13,500/18,832 agents processed (71.7%)
+- **Issue**: The `perform_drillthrough` function in `integrations/reca_scraper_logic.py` is failing to extract contact information
+
+### 🎯 Active Checklist (CodeBuddy Orchestra)
+
+#### Phase 1: Fix RECA Phone Extraction (Persona: Debugger) - IN PROGRESS
+- [ ] Debug and fix phone extraction logic in `reca_scraper_logic.py`
+- [ ] Test extraction on sample agents
+- [ ] Resume deep scrape with fixed logic
+
+#### Phase 2: Architect Email Enrichment (Persona: Architect) - PENDING
+- [ ] Design DataBreach.com integration architecture
+- [ ] Plan rate-limiting and caching strategy
+- [ ] Define data flow for third-party enrichment
+
+#### Phase 3: Implement Email Enrichment (Persona: Implementation Planner) - PENDING
+- [ ] Build `scripts/enrich_emails_databreach.py`
+- [ ] Implement checkpointing for enrichment process
+- [ ] Process existing JSON data non-destructively
+
+#### Phase 4: Data Validation & Merge (Persona: Validator) - PENDING
+- [ ] Clean and merge RECA phone data with DataBreach email data
+- [ ] Validate data integrity and deduplication
+
+#### Phase 5: Database Ingestion (Persona: Project Manager) - PENDING
+- [ ] Ingest enhanced dataset into PostgreSQL
+- [ ] Verify API endpoints serve data correctly
+
+#### Phase 6: Productionization (Persona: Architect) - PENDING
+- [ ] Update Docker/Deployment configs
+- [ ] Deploy enhanced system
 
 ---
 
-## 🎯 What It Does
+## Overview
 
-Agent Orchestra is a comprehensive AI-powered development assistant that:
+### Agent Orchestra
 
-- **Analyzes repositories** to understand codebase structure and architecture
-- **Extracts requirements** from project specifications and user stories
-- **Designs architectures** tailored to specific project needs
-- **Creates implementation plans** with detailed step-by-step guidance
-- **Validates implementations** against best practices and requirements
-- **Routes intelligently** between local and cloud LLMs based on task complexity and cost
+Five specialized agents collaborate to help users design production-grade agent orchestras:
 
-### 🏗️ System Architecture
+1. **Repository Analysis Agent** — Reads and understands architecture patterns from repos
+2. **Requirements Extraction Agent** — Conducts conversational Q&A to extract user requirements
+3. **Architecture Designer Agent** — Applies patterns to design custom agent orchestras
+4. **Implementation Planner Agent** — Generates phased implementation plans with cost estimates
+5. **Validator Agent** — Reviews designs against best practices and safety mechanisms
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    API Gateway (FastAPI)                    │
-├─────────────────────────────────────────────────────────────┤
-│  Security │ Rate Limit │ CORS │ Audit │ Multi-tenancy       │
-├─────────────────────────────────────────────────────────────┤
-│                   Model Router (Core)                       │
-│  ┌─────────────┬─────────────┬─────────────┬─────────────┐  │
-│  │   Local     │   Cloud     │   Hybrid    │   Fallback  │  │
-│  │   Models    │   Models    │   Routing   │   Mechanism │  │
-│  └─────────────┴─────────────┴─────────────┴─────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                    Agent Orchestrator                       │
-│  ┌─────────────┬─────────────┬─────────────┬─────────────┐  │
-│  │ Repository  │ Requirements│ Architecture│ Implementation│ │
-│  │ Analyzer    │ Extractor   │ Designer    │ Planner      │  │
-│  └─────────────┴─────────────┴─────────────┴─────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│              Enterprise Features (v2)                       │
-│  • Semantic Caching  • Analytics  • Budget Mgmt  • Audit    │
-└─────────────────────────────────────────────────────────────┘
-```
+### RECA Scraper
 
----
+A full-scale scraper for the Alberta Real Estate Council Association (RECA) agent directory:
 
-## 🚀 Quick Start
+- **Surface scrape** — Iterates A–Z + two-letter prefixes (702 queries) to find all licensed agents
+- **Deep scrape** — Drills into each agent's detail page to extract email addresses and phone numbers
+- **Checkpoint/resume** — Saves progress to JSON so interrupted scrapes can resume
+- **Deduplication** — Merges results by `drill_id` for unique records
+- **Export** — Outputs to both JSON and CSV formats
 
-### Prerequisites
+## Technology Stack
 
-- **Python 3.11+** (3.13 compatible)
-- **Ollama** (for local models) - Optional but recommended
-- **Redis** (for caching and message bus)
-- **PostgreSQL** (for audit logs and analytics)
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.11+ with FastAPI |
+| LLM | **Google Gemini** (primary) via `google-genai` SDK |
+| Message Bus | Redis for event-driven communication |
+| Database | Postgres on Neon for conversation history |
+| Observability | Prometheus + Grafana |
+| Scraping | `requests` + RECA ViewerControl POST-based scraper |
 
-### Installation
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/stackconsult/agent-orchestra-production-build-tmp
-cd agent-orchestra-production-build-tmp
-
-# Setup Python environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-cd q-and-a-orchestra-agent
+# 1. Install dependencies
 pip install -r requirements.txt
 
-# Setup environment
+# 2. Configure environment
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env — set GOOGLE_API_KEY (required)
+
+# 2.5 Setup Development Environment (Fixes Git extensions)
+# If you encounter issues with Git extensions or pre-commit hooks:
+./scripts/setup_dev.sh
+# Note: If this fails, run `brew install git-lfs` manually and try again.
+
+# 3. Run integration tests
+pytest tests/test_integration.py -v
+
+# 4. Run a single-name E2E scrape
+python tests/e2e_reca_scrape.py
+
+# 5. Run the full A-Z sweep (surface only)
+python scripts/full_sweep.py
+
+# 6. Run with deep scrape (email & phone extraction)
+python scripts/full_sweep.py --deep
+
+# 7. Resume an interrupted sweep
+python scripts/full_sweep.py --deep --resume
+
+# 8. Scrape specific letters only
+python scripts/full_sweep.py --letters A B C --deep
+
+# 9. Run Async Scraper (Redis required)
+# Start Redis
+redis-server
+
+# Start Worker
+python scripts/scraper_worker.py
+
+# Queue jobs via Agent or QueueManager
+# (See agents/reca_scraper_agent.py for usage)
 ```
 
-### Environment Configuration
+## Architecture
 
-Create `.env` file:
-
-```bash
-# Core Configuration
-ENV=development
-DEBUG=true
-SECRET_KEY=your-secret-key-here
-JWT_SECRET_KEY=your-jwt-secret-key
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/orchestra
-REDIS_URL=redis://localhost:6379/0
-
-# Local Models (Ollama)
-OLLAMA_BASE_URL=http://localhost:11434
-MODEL_ROUTING_MODE=local-preferred
-
-# Cloud API Keys (Optional - for fallback)
-ANTHROPIC_API_KEY=your-anthropic-key
-OPENAI_API_KEY=your-openai-key
-
-# CORS Configuration
-APP_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:3000
 ```
-
-### Running the System
-
-```bash
-# Start the main application
-cd q-and-a-orchestra-agent
-python main_v2.py
-
-# Or use the development script
-./scripts/start_dev.sh
-```
-
-The API will be available at `http://localhost:8000`
-
----
-
-## 📚 API Documentation
-
-### Core Endpoints
-
-#### Chat with the Orchestra
-
-```http
-POST /v2/chat
-Content-Type: application/json
-Authorization: Bearer <token>
-
-{
-  "message": "Analyze my React project and suggest improvements",
-  "session_id": "optional-session-id",
-  "context": {
-    "repository_path": "/path/to/repo",
-    "task_type": "analysis"
-  }
-}
-```
-
-#### List Available Models
-
-```http
-GET /v2/models
-Authorization: Bearer <token>
-```
-
-#### Health Check
-
-```http
-GET /health
-```
-
-#### Analytics Dashboard
-
-```http
-GET /v2/analytics/dashboard?start_date=2024-01-01&end_date=2024-01-31
-Authorization: Bearer <token>
-```
-
-### Agent-Specific Operations
-
-The system orchestrates multiple specialized agents:
-
-1. **Repository Analyzer** - Analyzes codebase structure
-2. **Requirements Extractor** - Extracts and clarifies requirements
-3. **Architecture Designer** - Creates system architectures
-4. **Implementation Planner** - Generates detailed implementation plans
-5. **Validator** - Validates against best practices
-
----
-
-## 🔒 Enterprise Security
-
-This system implements comprehensive security controls with **A+ security rating**:
-
-### Security Features
-
-- **CORS Protection**: Environment-based origin configuration
-- **Input Validation**: Comprehensive Pydantic schemas with XSS prevention
-- **Rate Limiting**: Endpoint-specific limits (10/min for invoke, 5/min for auth)
-- **Prompt Injection Detection**: Advanced pattern-based threat detection
-- **Security Headers**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- **Audit Logging**: SOC 2, HIPAA, GDPR compliant logging
-- **Multi-tenancy**: Tenant isolation with context management
-- **Budget Management**: Cost controls and spending limits
-
-### Security Verification
-
-```bash
-# Run comprehensive security checks
-cd q-and-a-orchestra-agent
-./scripts/security_verification.sh
-
-# Expected: All checks PASSED ✅
-```
-
----
-
-## 🏢 Enterprise Features (v2)
-
-### Multi-Tenancy
-
-- Tenant isolation at all levels
-- Per-tenant configurations and quotas
-- Tenant-specific analytics and reporting
-
-### Budget Management
-
-- Cost tracking per tenant/model
-- Configurable budget limits
-- Automatic spending alerts
-- Cost optimization recommendations
-
-### Advanced Analytics
-
-- Real-time usage metrics
-- Model performance analytics
-- Cost analysis and trends
-- Custom dashboards
-
-### Semantic Caching
-
-- Intelligent response caching
-- Semantic similarity matching
-- Reduced API costs and latency
-- Cache invalidation strategies
-
-### Model Discovery
-
-- Automatic model discovery
-- Capability assessment
-- Performance benchmarking
-- Dynamic model registration
-
----
-
-## 🛠️ Development
-
-### Project Structure
-
-```text
 q-and-a-orchestra-agent/
-├── agents/              # Specialized AI agents
-├── core/                # Core routing and orchestration
-├── providers/           # LLM provider clients
-├── middleware/          # Security and utility middleware
-├── schemas/             # Pydantic schemas
-├── orchestrator/        # Message orchestration
-├── integrations/        # External integrations
-├── enterprise/          # Enterprise features
-├── config/              # Configuration modules
-└── scripts/             # Utility scripts
+├── agents/                # Specialized agent implementations
+│   └── reca_scraper_agent.py
+├── config/                # Model routing & policy configuration
+│   ├── models.yaml        # Gemini model definitions
+│   └── policies.yaml      # Model selection policies
+├── core/                  # Model router, telemetry, introspection
+│   └── model_router.py    # Routes to Gemini/Anthropic/OpenAI
+├── integrations/          # External service integrations
+│   └── reca_scraper_logic.py  # RECA HTTP scraper engine
+├── orchestrator/          # Message bus, router, context management
+├── providers/             # LLM provider clients
+│   └── google_client.py   # Gemini API client
+├── schemas/               # Pydantic data models
+├── scripts/
+│   ├── full_sweep.py      # Production A-Z sweep script
+│   ├── db_ingest.py       # Database ingestion script
+│   └── incremental_scraper.py
+├── tests/
+│   ├── test_integration.py
+│   └── e2e_reca_scrape.py
+└── data/                  # Scrape output (gitignored)
+    ├── all_agents.json
+    ├── all_agents_deep.json
+    └── deep_checkpoint.json
 ```
 
-### Running Tests
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_API_KEY` | **Yes** | Google Gemini API key (primary LLM) |
+| `ANTHROPIC_API_KEY` | No | Fallback LLM provider |
+| `OPENAI_API_KEY` | No | Fallback LLM provider |
+| `REDIS_URL` | No | Redis URL for message bus (default: `redis://localhost:6379`) |
+
+## Development
 
 ```bash
-# Run all tests
+# Run tests
 pytest tests/ -v
-
-# Run security tests
-pytest tests/test_security.py -v
-
-# Run with coverage
-pytest --cov=. tests/
-```
-
-### Code Quality
-
-```bash
-# Lint code
-flake8 .
 
 # Format code
 black .
 
-# Type checking
+# Lint
+flake8 .
+
+# Type check
 mypy .
-
-# Security scan
-safety scan
-bandit -r .
 ```
 
----
+## CodeBuddy Integration
 
-## 📊 Monitoring & Observability
+This project includes **CodeBuddy** autonomous agent capabilities.
 
-### Health Checks
+### Active Personas
+- **Project Manager**: Planning and task management (`task.md`)
+- **Architect**: System design and architecture decisions
+- **Debugger**: Self-healing and issue resolution (currently active on phone extraction)
+- **Reviewer**: Code quality and best practices
+- **Tester**: Verification and testing
+- **Implementation Planner**: Detailed implementation planning
 
-```bash
-curl http://localhost:8000/health
-```
+### Features
+- **Self-Healing Workflow**: Automatically fixes test failures
+- **Rules Engine**: Custom project rules in `.codebuddy/rules.md`
+- **Non-Destructive Enhancement**: Builds alongside existing architecture without breaking changes
 
-### Metrics
+## Data Processing Pipeline
 
-- Request latency and throughput
-- Model usage statistics
-- Error rates and types
-- Cost tracking
-- Cache hit rates
+### Current State
+1. **Surface Scrape** ✅ - Collected 18,832 agents
+2. **Deep Scrape** ⚠️ - Processing complete but extraction failed (0% rate)
+3. **Email Enrichment** 🔄 - Planned via DataBreach.com integration
+4. **Data Validation** ⏳ - Pending
+5. **Database Ingestion** ⏳ - Pending
 
-### Logging
+### Next Steps
+The immediate priority is fixing the phone/email extraction in `integrations/reca_scraper_logic.py`. Once resolved, we will implement the DataBreach.com email enrichment as a separate, non-destructive process.
 
-- Structured JSON logging
-- Configurable log levels
-- Audit trail for all actions
-- Performance tracing
+## License
 
----
-
-## 🐳 Docker Deployment
-
-```bash
-# Build the image
-docker build -t agent-orchestra .
-
-# Run with Docker Compose
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-```
-
----
-
-## ☸️ Kubernetes Deployment
-
-```bash
-# Apply configurations
-kubectl apply -f deployment/kubernetes/
-
-# Check status
-kubectl get pods -n orchestra
-
-# Port forward
-kubectl port-forward svc/orchestra-api 8000:80
-```
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🆘 Support
-
-- **Documentation**: See the `/docs` directory
-- **Issues**: Create an issue on GitHub
-- **Security**: Report security issues to <security@example.com>
-
----
-
-## 🎯 Roadmap
-
-- [ ] Additional model providers (Cohere, Hugging Face)
-- [ ] Advanced agent customization
-- [ ] Real-time collaboration features
-- [ ] Advanced analytics dashboard
-- [ ] Plugin system for custom agents
-- [ ] GraphQL API support
-- [ ] WebSocket real-time updates
-
----
-
-## Acknowledgments
-
-Built with ❤️ for the developer community
+MIT License — see LICENSE file for details.
