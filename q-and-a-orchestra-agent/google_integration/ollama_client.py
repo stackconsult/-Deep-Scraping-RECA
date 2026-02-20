@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import aiohttp
 from typing import Dict, Any, Optional
 
@@ -9,13 +10,17 @@ class OllamaHybridClient:
     """Client for interacting with Ollama models"""
     
     def __init__(self, base_url: str = "http://localhost:11434"):
-        self.base_url = base_url
+        self.base_url = os.getenv("OLLAMA_BASE_URL", base_url)
+        self.api_key = os.getenv("OLLAMA_API_KEY")
         self.usage_stats = {
             'requests': 0,
             'tokens_in': 0,
             'tokens_out': 0,
             'errors': 0
         }
+        
+        if self.api_key:
+            logger.info("Ollama API key configured")
     
     async def extract_emails(self, content: str, agent_data: Dict, use_cloud: bool = False) -> Dict:
         """Extract emails using Ollama models"""
@@ -34,10 +39,17 @@ class OllamaHybridClient:
         {content}
         """
         
+        headers = {
+            "Content-Type": "application/json"
+        }
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/api/generate",
+                    headers=headers,
                     json={
                         "model": model,
                         "prompt": prompt,
