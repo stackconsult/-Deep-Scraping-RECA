@@ -1,20 +1,21 @@
+# Agent Archetypes Package
 """
-Q&A Orchestra Agent Agents Package.
-
-This package contains the five core agents that work together to design
-and plan agent orchestras through conversational Q&A.
+Complete implementation of agent archetypes from Awesome LLM Apps
+for email enrichment system
 """
 
-from .repository_analyzer import RepositoryAnalyzerAgent
-from .requirements_extractor import RequirementsExtractorAgent
-from .architecture_designer import ArchitectureDesignerAgent
-from .implementation_planner import ImplementationPlannerAgent
-from .validator import ValidatorAgent
+from .context_optimizer import ContextCompressor
+from .sequential_executor import SequentialExecutor
+from .pattern_recognition import PatternExtractor, PatternLearner, PatternMatcher, EmailPattern
+from .model_router import SmartRouter, TaskType
 
 __all__ = [
-    "RepositoryAnalyzerAgent",
-    "RequirementsExtractorAgent", 
-    "ArchitectureDesignerAgent",
-    "ImplementationPlannerAgent",
-    "ValidatorAgent"
+    'ContextCompressor',
+    'SequentialExecutor',
+    'PatternExtractor',
+    'PatternLearner',
+    'PatternMatcher',
+    'EmailPattern',
+    'SmartRouter',
+    'TaskType'
 ]

@@ -270,7 +270,7 @@ class EnhancedHybridEmailAgent:
         if not agent_id:
             return None
         
-        history = self.memory.get_agent_history(agent_id)
+        history = await self.memory.get_agent_history(agent_id)
         if history:
             # Return most recent successful result
             for record in reversed(history):
