@@ -2,6 +2,24 @@
 
 A production-grade meta-agent system for designing agent orchestras through conversational Q&A — plus a high-performance Alberta real estate agent scraper powered by RECA.
 
+## 🎭 CodeBuddy Orchestra Framework
+
+This project follows the **CodeBuddy Orchestra** framework with specialized personas:
+
+- **Project Manager**: Planning and coordination
+- **Architect**: System design and architecture  
+- **Implementation Planner**: Code implementation strategy
+- **Debugger**: Issue identification and resolution
+- **Validator**: Code review and quality assurance
+
+### Phase-to-Persona Mapping
+- Phase 1 (CSV Export) → Debugger ✅
+- Phase 2 (Email Testing) → Implementation Planner 🔄
+- Phase 3 (Full Enrichment) → Implementation Planner ◐
+- Phase 4 (Validation) → Validator ◐
+- Phase 5 (Database) → Project Manager ◐
+- Phase 6 (Production) → Architect ◐
+
 ## Overview
 
 ### Agent Orchestra
@@ -19,7 +37,7 @@ A full-scale scraper for the Alberta Real Estate Council Association (RECA) agen
 - **Surface scrape** — ✅ Complete: 20,447 agents scraped and stored in JSON
 - **Deep scrape** — ⚠️ Partial: RECA endpoint returns 404, need alternative approach
 - **Email enrichment** — 🔄 In Progress: Architecture complete, implementation ready
-- **CSV export** — ❌ Pending: Need to convert JSON to downloadable CSV
+- **CSV export** — ✅ Complete: Auto-path configuration implemented
 - **Database ingestion** — ✅ Ready: Scripts and schema in place
 
 ## Technology Stack
@@ -51,13 +69,16 @@ cp .env.example .env
 # 3. Run integration tests
 pytest tests/test_integration.py -v
 
-# 4. Export existing data to CSV
+# 4. Check path configuration
+python scripts/check_paths.py
+
+# 5. Export to CSV (auto-saves to Downloads)
 python scripts/export_to_csv.py
 
-# 5. Run email enrichment (when ready)
+# 6. Run email enrichment (when ready)
 python scripts/enrich_emails.py
 
-# 6. Ingest data into database
+# 7. Ingest data into database
 python scripts/db_ingest.py
 ```
 
@@ -81,14 +102,20 @@ q-and-a-orchestra-agent/
 ├── scripts/               # Utility and processing scripts
 │   ├── full_sweep.py      # Production A-Z sweep script
 │   ├── enrich_emails.py   # Email enrichment engine
-│   ├── export_to_csv.py   # CSV export utility
+│   ├── export_to_csv.py   # CSV export with auto-path
+│   ├── check_paths.py     # Path configuration utility
 │   └── db_ingest.py       # Database ingestion
 ├── tests/
 │   ├── test_integration.py
 │   └── e2e_reca_scrape.py
+├── docs/                  # Documentation
+│   ├── email-enrichment-architecture.md
+│   └── codebuddy-compliance.md
+├── .codebuddy/            # CodeBuddy rules
+│   └── rules.md           # Repository rules
 └── data/                  # Scrape output (gitignored)
     ├── all_agents.json    # ✅ 20,447 agents scraped
-    ├── all_agents.csv     # ❌ To be generated
+    ├── all_agents.csv     # ✅ Generated on demand
     └── sweep_checkpoint.json
 ```
 
@@ -141,14 +168,14 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 - Email enrichment architecture designed
 - Database schema and ingestion scripts ready
 - Data validation and filtering utilities available
+- CSV export with auto-path configuration
+- CodeBuddy Orchestra framework fully integrated
 
 ### 🔄 In Progress
 - Email enrichment implementation testing
-- CSV export generation
 
 ### ❌ Issues
 - RECA deep scrape endpoint returns 404 (need alternative approach)
-- No CSV export available yet
 
 ## License
 
