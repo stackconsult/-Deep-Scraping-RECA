@@ -13,6 +13,7 @@ This project follows the **CodeBuddy Orchestra** framework with specialized pers
 - **Validator**: Code review and quality assurance
 
 ### Phase-to-Persona Mapping
+
 - Phase 1 (CSV Export) → Debugger ✅
 - Phase 2 (Email Testing) → Implementation Planner 🔄
 - Phase 3 (Full Enrichment) → Implementation Planner ◐
@@ -23,6 +24,7 @@ This project follows the **CodeBuddy Orchestra** framework with specialized pers
 ## Overview
 
 ### Agent Orchestra
+
 Five specialized agents collaborate to help users design production-grade agent orchestras:
 
 1. **Repository Analysis Agent** — Reads and understands architecture patterns from repos
@@ -32,6 +34,7 @@ Five specialized agents collaborate to help users design production-grade agent 
 5. **Validator Agent** — Reviews designs against best practices and safety mechanisms
 
 ### RECA Scraper
+
 A full-scale scraper for the Alberta Real Estate Council Association (RECA) agent directory:
 
 - **Surface scrape** — ✅ Complete: 20,447 agents scraped and stored in JSON
@@ -124,6 +127,7 @@ q-and-a-orchestra-agent/
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GOOGLE_API_KEY` | **Yes** | Google Gemini API key (primary LLM) |
+| `OLLAMA_API_KEY` | No | API key for authenticated Ollama instances (optional) |
 | `ANTHROPIC_API_KEY` | No | Fallback LLM provider |
 | `OPENAI_API_KEY` | No | Fallback LLM provider |
 | `REDIS_URL` | No | Redis URL for message bus (default: `redis://localhost:6379`) |
@@ -150,6 +154,7 @@ mypy .
 This project includes **CodeBuddy** autonomous agent capabilities.
 
 ### Personas
+
 - **Project Manager**: `Activating CodeBuddy Project Manager...` (Planning)
 - **Architect**: `Activating CodeBuddy Architect...` (System Design)
 - **Reviewer**: `Activating CodeBuddy Reviewer...` (Code Quality)
@@ -157,6 +162,7 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 - **Debugger**: `Activating CodeBuddy Debugger...` (Self-Healing)
 
 ### Features
+
 - **Self-Healing Workflow**: Automatically fixes test failures.
 - **Rules Engine**: Custom project rules in `.codebuddy/rules.md`.
 - **City Normalization**: `scripts/normalize_data.py` ensures consistent data casing.
@@ -164,6 +170,7 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 ## Current Status
 
 ### ✅ Completed
+
 - Surface scrape of all RECA agents (20,447 total)
 - Email enrichment architecture designed
 - Database schema and ingestion scripts ready
@@ -172,9 +179,11 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 - CodeBuddy Orchestra framework fully integrated
 
 ### 🔄 In Progress
+
 - Email enrichment implementation testing
 
 ### ❌ Issues
+
 - RECA deep scrape endpoint returns 404 (need alternative approach)
 
 ## License
