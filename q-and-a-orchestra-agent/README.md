@@ -16,11 +16,11 @@ Five specialized agents collaborate to help users design production-grade agent 
 ### RECA Scraper
 A full-scale scraper for the Alberta Real Estate Council Association (RECA) agent directory:
 
-- **Surface scrape** — Iterates A–Z + two-letter prefixes (702 queries) to find all licensed agents
-- **Deep scrape** — Drills into each agent's detail page to extract email addresses
-- **Checkpoint/resume** — Saves progress to JSON so interrupted scrapes can resume
-- **Deduplication** — Merges results by `drill_id` for unique records
-- **Export** — Outputs to both JSON and CSV formats
+- **Surface scrape** — ✅ Complete: 20,447 agents scraped and stored in JSON
+- **Deep scrape** — ⚠️ Partial: RECA endpoint returns 404, need alternative approach
+- **Email enrichment** — 🔄 In Progress: Architecture complete, implementation ready
+- **CSV export** — ❌ Pending: Need to convert JSON to downloadable CSV
+- **Database ingestion** — ✅ Ready: Scripts and schema in place
 
 ## Technology Stack
 
@@ -51,30 +51,14 @@ cp .env.example .env
 # 3. Run integration tests
 pytest tests/test_integration.py -v
 
-# 4. Run a single-name E2E scrape
-python tests/e2e_reca_scrape.py
+# 4. Export existing data to CSV
+python scripts/export_to_csv.py
 
-# 5. Run the full A-Z sweep (surface only)
-python scripts/full_sweep.py
+# 5. Run email enrichment (when ready)
+python scripts/enrich_emails.py
 
-# 6. Run with deep scrape (email extraction)
-python scripts/full_sweep.py --deep
-
-# 7. Resume an interrupted sweep
-python scripts/full_sweep.py --deep --resume
-
-# 8. Scrape specific letters only
-python scripts/full_sweep.py --letters A B C --deep
-
-# 9. Run Async Scraper (Redis required)
-# Start Redis
-redis-server
-
-# Start Worker
-python scripts/scraper_worker.py
-
-# Queue jobs via Agent or QueueManager
-# (See agents/reca_scraper_agent.py for usage)
+# 6. Ingest data into database
+python scripts/db_ingest.py
 ```
 
 ## Architecture
@@ -94,14 +78,17 @@ q-and-a-orchestra-agent/
 ├── providers/             # LLM provider clients
 │   └── google_client.py   # Gemini API client
 ├── schemas/               # Pydantic data models
-├── scripts/
-│   └── full_sweep.py      # Production A-Z sweep script
+├── scripts/               # Utility and processing scripts
+│   ├── full_sweep.py      # Production A-Z sweep script
+│   ├── enrich_emails.py   # Email enrichment engine
+│   ├── export_to_csv.py   # CSV export utility
+│   └── db_ingest.py       # Database ingestion
 ├── tests/
 │   ├── test_integration.py
 │   └── e2e_reca_scrape.py
 └── data/                  # Scrape output (gitignored)
-    ├── reca_agents.json
-    ├── reca_agents.csv
+    ├── all_agents.json    # ✅ 20,447 agents scraped
+    ├── all_agents.csv     # ❌ To be generated
     └── sweep_checkpoint.json
 ```
 
@@ -113,6 +100,7 @@ q-and-a-orchestra-agent/
 | `ANTHROPIC_API_KEY` | No | Fallback LLM provider |
 | `OPENAI_API_KEY` | No | Fallback LLM provider |
 | `REDIS_URL` | No | Redis URL for message bus (default: `redis://localhost:6379`) |
+| `DATABASE_URL` | No | PostgreSQL URL for data ingestion |
 
 ## Development
 
@@ -146,6 +134,21 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 - **Rules Engine**: Custom project rules in `.codebuddy/rules.md`.
 - **City Normalization**: `scripts/normalize_data.py` ensures consistent data casing.
 
+## Current Status
+
+### ✅ Completed
+- Surface scrape of all RECA agents (20,447 total)
+- Email enrichment architecture designed
+- Database schema and ingestion scripts ready
+- Data validation and filtering utilities available
+
+### 🔄 In Progress
+- Email enrichment implementation testing
+- CSV export generation
+
+### ❌ Issues
+- RECA deep scrape endpoint returns 404 (need alternative approach)
+- No CSV export available yet
 
 ## License
 
