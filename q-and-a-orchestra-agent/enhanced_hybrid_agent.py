@@ -18,6 +18,7 @@ from agents.model_router import SmartRouter, TaskType
 
 # Import existing components
 from google_integration.ollama_client import OllamaHybridClient
+from google_integration.gemini_client import GeminiHybridClient
 from google_integration.mem0_memory import Mem0MemoryManager
 
 # Configure logging
@@ -31,6 +32,7 @@ class EnhancedHybridEmailAgent:
         """Initialize the enhanced hybrid agent"""
         # Core components
         self.ollama = OllamaHybridClient()
+        self.gemini = GeminiHybridClient()
         self.memory = Mem0MemoryManager()
         
         # Archetypes
@@ -198,15 +200,23 @@ class EnhancedHybridEmailAgent:
         # Prepare content based on task type
         content = self._prepare_content(agent_data, task_type)
         
-        # Determine if using cloud or local
-        use_cloud = 'cloud' in model or model.startswith('gemini')
-        
-        # Execute with Ollama
-        result = await self.ollama.extract_emails(
-            content=content,
-            agent_data=agent_data,
-            use_cloud=use_cloud
-        )
+        # Route to appropriate client
+        if model.startswith('gemini'):
+            result = await self.gemini.extract_emails(
+                content=content,
+                agent_data=agent_data,
+                model=model
+            )
+        else:
+            # Determine if using cloud or local for Ollama
+            use_cloud = 'cloud' in model
+            
+            # Execute with Ollama
+            result = await self.ollama.extract_emails(
+                content=content,
+                agent_data=agent_data,
+                use_cloud=use_cloud
+            )
         
         return result
     
