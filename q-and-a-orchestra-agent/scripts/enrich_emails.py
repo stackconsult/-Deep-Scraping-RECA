@@ -9,6 +9,7 @@ import json
 import time
 import re
 import requests
+import argparse
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -294,10 +295,22 @@ class EmailEnrichmentEngine:
         
         return enriched_agents
 
-
 def main():
-    """Test the email enrichment engine."""
-    # Load sample agents
+    """Main function with command line arguments."""
+    parser = argparse.ArgumentParser(description='Enrich RECA agent data with emails')
+    parser.add_argument('--sample', action='store_true', help='Run on sample data (100 agents)')
+    parser.add_argument('--size', type=int, default=100, help='Sample size when using --sample')
+    parser.add_argument('--checkpoint', help='Checkpoint file path')
+    parser.add_argument('--output', default='all_agents_enriched.json', help='Output file name')
+    
+    args = parser.parse_args()
+    
+    print("=" * 60)
+    print("Email Enrichment Engine")
+    print("Implementation Planner Persona - Phase 2")
+    print("=" * 60)
+    
+    # Load agents
     agents_file = Path("data/all_agents.json")
     
     if not agents_file.exists():
@@ -307,29 +320,32 @@ def main():
     with open(agents_file, 'r') as f:
         agents = json.load(f)
     
-    # Take first 10 for testing
-    sample_agents = agents[:10]
+    # Determine how many agents to process
+    if args.sample:
+        agents = agents[:args.size]
+        print(f"Processing sample of {len(agents)} agents")
+    else:
+        print(f"Processing all {len(agents)} agents")
     
     # Initialize enrichment engine
     engine = EmailEnrichmentEngine()
     
     # Enrich agents
-    enriched = engine.enrich_agents(
-        sample_agents,
-        checkpoint_file="data/enrichment_checkpoint.json"
-    )
+    checkpoint_file = args.checkpoint or f"data/enrichment_checkpoint_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    enriched = engine.enrich_agents(agents, checkpoint_file)
     
     # Save results
-    output_file = Path("data/agents_enriched_sample.json")
+    output_file = Path("data") / args.output
     with open(output_file, 'w') as f:
         json.dump(enriched, f, indent=2)
     
     # Report
     emails_found = sum(1 for a in enriched if a.get('enrichment', {}).get('email'))
-    logger.info(f"Enriched {len(enriched)} agents")
-    logger.info(f"Found {emails_found} emails")
-    logger.info(f"Results saved to {output_file}")
-
+    print(f"\nEnrichment complete!")
+    print(f"Total agents: {len(enriched)}")
+    print(f"Emails found: {emails_found}")
+    print(f"Success rate: {(emails_found / len(enriched)) * 100:.1f}%")
+    print(f"Results saved to: {output_file}")
 
 if __name__ == "__main__":
     main()
