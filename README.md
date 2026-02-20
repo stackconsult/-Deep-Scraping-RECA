@@ -15,16 +15,17 @@
 
 ### Phase 1: Data Export 📊
 ```diff
-+ ✅ IN PROGRESS: CSV export script created and ready
++ ✅ COMPLETE: Auto-path CSV export implemented
 ```
 
 - [x] **Create CSV Export**
-  - [x] Test `export_to_csv.py` script
+  - [x] Implement cross-platform path detection
+  - [x] Auto-save to Downloads folder (default)
   - [x] Add progress tracking for large files
   - [x] Add error handling and memory management
+  - [x] Create path configuration utility
   - [ ] Generate `all_agents.csv` (20,447 records)
   - [ ] Verify CSV format and data integrity
-  - [ ] Make CSV available for download
 
 ### Phase 2: Email Enrichment 📧
 ```diff
@@ -97,7 +98,8 @@
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total Agents Scraped | 20,447 | ✅ Complete |
-| CSV Export Script | ✅ Ready | 🔄 Ready to Run |
+| CSV Export Script | ✅ Enhanced | 🔄 Ready to Run |
+| Auto-Path Detection | ✅ Implemented | 🔄 Cross-Platform |
 | CSV Export | 0 / 20,447 | ❌ Not Started |
 | Emails Enriched | 0 / 20,447 | ◐ Ready to Start |
 | Data Validated | 0 / 20,447 | ◐ Pending |
@@ -108,9 +110,10 @@
 ## 🎯 Immediate Focus
 
 **Right Now:**
-1. Run `python scripts/export_to_csv.py` to generate CSV
-2. Verify CSV output format
-3. Make CSV available for download
+1. Run path check: `python scripts/check_paths.py`
+2. Export CSV: `python scripts/export_to_csv.py`
+3. Verify CSV in Downloads folder
+4. Download CSV to your system
 
 **Next Phase:**
 1. Test email enrichment on sample data
@@ -121,8 +124,17 @@
 ## 🔧 Quick Commands
 
 ```bash
-# Export to CSV (READY TO RUN)
+# Check path configuration
+python scripts/check_paths.py
+
+# Export to CSV (saves to Downloads folder)
 python scripts/export_to_csv.py
+
+# Export to project data folder
+python scripts/export_to_csv.py --no-download
+
+# Export with custom filename
+python scripts/export_to_csv.py --filename reca_agents_2026.csv
 
 # Test email enrichment (sample)
 python scripts/enrich_emails.py --sample
@@ -133,6 +145,18 @@ python scripts/validate_data.py
 # Ingest to database
 python scripts/db_ingest.py
 ```
+
+---
+
+## 📁 Auto-Path Features
+
+The CSV export now automatically detects your system's Downloads folder:
+
+- **Windows**: Reads from Registry to get actual Downloads path
+- **macOS**: Uses `~/Downloads`
+- **Linux**: Reads XDG config or falls back to `~/Downloads`
+
+Default behavior saves CSV to Downloads folder for easy access. Use `--no-download` flag to save to project folder instead.
 
 ---
 
