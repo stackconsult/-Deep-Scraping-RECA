@@ -15,6 +15,7 @@ from agents.context_optimizer import ContextCompressor
 from agents.sequential_executor import SequentialExecutor
 from agents.pattern_recognition import PatternExtractor, PatternMatcher, PatternLearner
 from agents.model_router import SmartRouter, TaskType
+from agents.deep_research_agent import DeepResearchAgent
 
 # Import existing components
 from google_integration.ollama_client import OllamaHybridClient
@@ -48,6 +49,7 @@ class EnhancedHybridEmailAgent:
         self.pattern_matcher = PatternMatcher()
         self.pattern_learner = PatternLearner()
         self.router = SmartRouter()
+        self.deep_researcher = DeepResearchAgent(self.gemini, self.ollama)
         
         # Configuration
         self.config = self._default_config()
@@ -60,6 +62,7 @@ class EnhancedHybridEmailAgent:
             'successful_extractions': 0,
             'cache_hits': 0,
             'patterns_used': 0,
+            'deep_research_used': 0,
             'cost_saved': 0.0,
             'compression_savings': 0.0,
             'routing_decisions': 0
@@ -77,6 +80,7 @@ class EnhancedHybridEmailAgent:
             'use_smart_routing': True,
             'use_pattern_learning': True,
             'use_sequential_execution': True,
+            'use_deep_research_fallback': True,
             'compression_threshold': 100,  # Compress if >100 tokens
             'budget_per_agent': 0.01,  # $0.01 per agent max
             'priority': 'balanced'  # 'cost_sensitive', 'quality_first', 'speed_first', 'balanced'
@@ -129,6 +133,16 @@ class EnhancedHybridEmailAgent:
             else:
                 # Use direct model execution
                 result = await self._execute_direct(agent_data, selected_model, task_type)
+            
+            # Step 4.5: Deep Research Fallback
+            if not result.get('emails') and self.config['use_deep_research_fallback']:
+                logger.info(f"Standard extraction failed for {agent_data.get('name')}. Triggering Deep Research.")
+                deep_result = await self.deep_researcher.execute(agent_data)
+                
+                if deep_result.get('emails'):
+                    result = deep_result
+                    self.metrics['deep_research_used'] += 1
+                    routing_metadata['deep_research'] = True
             
             # Step 5: Apply pattern learning if enabled
             if self.config['use_pattern_learning'] and result.get('emails'):
