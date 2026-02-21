@@ -21,7 +21,13 @@ from google_integration.ollama_client import OllamaHybridClient
 from google_integration.gemini_client import GeminiHybridClient
 from google_integration.mem0_memory import Mem0MemoryManager
 
-# Configure logging
+# Hardening components
+try:
+    from config.settings import settings
+except ImportError:
+    settings = None
+
+# Configure logging (standard fallback if setup_logging not available)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
