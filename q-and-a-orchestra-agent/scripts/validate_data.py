@@ -34,6 +34,30 @@ def validate(agents: list) -> dict:
     missing_email = [a for a in agents if not a.get("email")]
     email_coverage = ((total - len(missing_email)) / total) * 100
 
+    # --- Enrichment Stats ---
+    enrichment_attempts = sum(1 for a in agents if a.get("enrichment_status"))
+    enrichment_success = sum(1 for a in agents if a.get("enrichment_status") == "success")
+    enrichment_rate = (enrichment_success / enrichment_attempts * 100) if enrichment_attempts > 0 else 0.0
+
+    # --- Validation Status ---
+    validation_statuses = Counter()
+    confidence_scores = []
+    
+    for a in agents:
+        meta = a.get("enrichment_metadata", {})
+        if meta:
+            # Check validation status if available, or infer
+            if meta.get("validated_emails"):
+                validation_statuses["valid"] += 1
+            elif a.get("enrichment_status") == "success":
+                validation_statuses["unverified"] += 1
+            
+            # Collect confidence
+            if meta.get("confidence"):
+                confidence_scores.append(meta.get("confidence"))
+
+    avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+
     # --- Duplicate drill_ids ---
     drill_ids = [a.get("drill_id", "") for a in agents if a.get("drill_id")]
     id_counts = Counter(drill_ids)
@@ -50,6 +74,11 @@ def validate(agents: list) -> dict:
         "total_agents": total,
         "email_coverage_pct": round(email_coverage, 1),
         "missing_email_count": len(missing_email),
+        "enrichment_attempts": enrichment_attempts,
+        "enrichment_success": enrichment_success,
+        "enrichment_success_rate": round(enrichment_rate, 1),
+        "validation_breakdown": dict(validation_statuses),
+        "avg_confidence_score": round(avg_confidence, 2),
         "duplicate_drill_ids": duplicates,
         "duplicate_count": sum(v - 1 for v in duplicates.values()),
         "status_breakdown": dict(statuses),
@@ -71,7 +100,16 @@ def print_report(report: dict) -> None:
     print(f"\n  Total agents:       {report['total_agents']}")
     print(f"  Email coverage:     {report['email_coverage_pct']}%")
     print(f"  Missing emails:     {report['missing_email_count']}")
-    print(f"  Duplicate drill_ids: {report['duplicate_count']}")
+    
+    if report['enrichment_attempts'] > 0:
+        print(f"\n  Enrichment Stats:")
+        print(f"    Attempts:         {report['enrichment_attempts']}")
+        print(f"    Success:          {report['enrichment_success']}")
+        print(f"    Rate:             {report['enrichment_success_rate']}%")
+        print(f"    Avg Confidence:   {report['avg_confidence_score']}")
+        print(f"    Valid Emails:     {report['validation_breakdown'].get('valid', 0)}")
+
+    print(f"\n  Duplicate drill_ids: {report['duplicate_count']}")
 
     if report["duplicate_drill_ids"]:
         print("\n  Duplicate IDs:")
