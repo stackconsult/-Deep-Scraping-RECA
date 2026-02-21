@@ -10,3 +10,6 @@ __pycache__/
 
 # Test Artifacts
 q-and-a-orchestra-agent/data/scale_test_results_*.json
+q-and-a-orchestra-agent/data/test_enrichment*.json
+q-and-a-orchestra-agent/data/sample_*.json
+
