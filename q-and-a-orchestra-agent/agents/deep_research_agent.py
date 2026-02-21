@@ -48,6 +48,9 @@ class DeepResearchAgent:
         links = []
         for query in queries[:1]: # Start with most specific
             try:
+                # Add delay to avoid rate limits
+                await asyncio.sleep(2.0)
+                
                 # Run sync DDGS in thread
                 results = await asyncio.to_thread(lambda: list(self.ddgs.text(query, max_results=max_results)))
                 for r in results:
@@ -67,11 +70,15 @@ class DeepResearchAgent:
         confidence = 0.0
         sources = []
         
-        # Process links concurrently
-        tasks = [self._process_link(link, agent_data) for link in links]
-        results = await asyncio.gather(*tasks)
+        # Process links concurrently but with limited concurrency to be polite
+        # Process max 3 links
+        links = links[:3]
         
-        for res in results:
+        for link in links:
+            # Add delay between page fetches
+            await asyncio.sleep(1.0)
+            res = await self._process_link(link, agent_data)
+            
             if res and res.get('emails'):
                 found_emails.extend(res['emails'])
                 sources.append(res.get('source'))

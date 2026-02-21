@@ -198,13 +198,13 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 - **Dockerization**: Production-ready container stack (API, DB, Redis, Ollama, Dashboard)
 - **Operational Hardening**: Structured logging and config validation
 - **UI Dashboard**: Streamlit app for data visualization
+- **Database Pipeline Upgrade**: Updated schema and ingestion scripts for rich metadata
+- **Deep Research Agent**: Search-driven fallback for hard-to-find targets
 - CSV export with auto-path configuration
 
 ### 🔄 In Progress
 
 - **Full Scale Enrichment**: Processing all 20,447 agents
-- **Database Pipeline Upgrade**: Updating schema and ingestion scripts for rich enrichment metadata
-- Deep Research Agent refinement
 
 ### ❌ Issues
 
