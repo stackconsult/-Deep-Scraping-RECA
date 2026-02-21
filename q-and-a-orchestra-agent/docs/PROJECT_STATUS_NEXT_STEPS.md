@@ -56,6 +56,7 @@ The system is feature-complete. We have successfully verified stability and perf
 ### 3. Feature Enhancements
 
 - [x] **UI Dashboard**: Built a Streamlit frontend (`dashboard/app.py`) to visualize enrichment progress, view data samples, and download results.
+- [x] **Database Pipeline Upgrade**: Updated schema (`003_enrichment_fields.sql`) and ingestion scripts (`scripts/db_ingest.py`) to store full enrichment metadata.
 - [ ] **Deep Research Upgrade**: Monitor Google's release of the public Deep Research API and upgrade the current stub.
 - [ ] **LinkedIn Integration**: (Optional) Add a specific module for verifying agents against LinkedIn public profiles (if compliant).
 
@@ -73,6 +74,7 @@ The system is feature-complete. We have successfully verified stability and perf
 | **3.2** | Create docker-compose (w/ Ollama) | Medium | Done |
 | **4.0** | **Refine Deep Research Agent** | Low | Pending |
 | **5.0** | **Build UI Dashboard** | Medium | Done |
+| **6.0** | **Upgrade Database Pipeline** | High | Done |
 
 ---
 
