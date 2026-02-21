@@ -40,6 +40,10 @@ class BaseAgent:
     def __init__(self, name: str, scraper: Optional[StructuredScraper] = None):
         self.name = name
         self.scraper = scraper
+        if self.scraper is None:
+             print(f"⚠️  WARNING: Agent {name} initialized WITHOUT scraper (will use mocks)")
+        else:
+             print(f"✅ Agent {name} initialized with scraper")
         self.stats = {
             'executions': 0,
             'successes': 0,
@@ -117,8 +121,14 @@ class SearchAgent(BaseAgent):
                     }
                 else:
                      # Fallback to pattern generation if scraper fails to find specific URL
-                    brokerage = data.get('brokerage', '').lower()
-                    domain = brokerage.replace(' ', '').replace('/', '').replace('.', '') + '.ca'
+                    brokerage = data.get('brokerage', '')
+                    # Use the robust extractor from the scraper
+                    domain = self.scraper._extract_domain(brokerage) if self.scraper else None
+                    
+                    if not domain:
+                        # Super fallback if scraper method fails or is missing
+                        domain = brokerage.lower().replace(' ', '').replace('/', '').replace('.', '') + '.ca'
+                        
                     result_data = {
                         'found': False, # Not found by scraper, but we have a guess
                         'website': f"https://{domain}",
@@ -172,45 +182,46 @@ class ExtractAgent(BaseAgent):
                 # Use the structured scraper
                 profile = await self.scraper.scrape_agent(data)
                 
-                emails = []
                 if profile.contact_info.email:
-                    emails.append({
+                    emails = [{
                         'email': profile.contact_info.email,
                         'confidence': profile.confidence,
                         'source': 'structured_scrape'
-                    })
+                    }]
                 
-                result_data = {
-                    'emails': emails,
-                    'extraction_method': 'structured_scraper',
-                    'source_url': profile.url,
-                    'domain': profile.brokerage  # simplistic
-                }
-                
-                execution_time = (datetime.now() - start_time).total_seconds()
-                self.update_stats(True, execution_time)
-                
-                return AgentResult(
-                    success=True,
-                    data=result_data,
-                    confidence=profile.confidence,
-                    execution_time=execution_time,
-                    metadata={'agent': self.name}
-                )
+                    result_data = {
+                        'emails': emails,
+                        'extraction_method': 'structured_scraper',
+                        'source_url': profile.url,
+                        'domain': profile.brokerage
+                    }
+                    
+                    execution_time = (datetime.now() - start_time).total_seconds()
+                    self.update_stats(True, execution_time)
+                    
+                    return AgentResult(
+                        success=True,
+                        data=result_data,
+                        confidence=profile.confidence,
+                        execution_time=execution_time,
+                        metadata={'agent': self.name}
+                    )
             
-            # Fallback (keep existing logic if no scraper)
-            if not data.get('found'):
-                return AgentResult(
+            # Fallback: if scraping failed or didn't run, try pattern generation
+            # We need at least a website or brokerage domain to guess
+            website = data.get('website', '')
+            if not website and not data.get('found'):
+                 return AgentResult(
                     success=False,
                     data={'emails': []},
-                    error="No website found",
+                    error="No website found and scraping failed",
                     confidence=0.0,
                     execution_time=0.0
                 )
-            
+
             # ... existing mock logic ...
             agent = data
-            domain = data.get('website', '').replace('https://', '').replace('http://', '')
+            domain = website.replace('https://', '').replace('http://', '').split('/')[0]
             emails = self._generate_mock_emails(agent, domain)
             
             result_data = {
@@ -245,28 +256,59 @@ class ExtractAgent(BaseAgent):
     
     def _generate_mock_emails(self, agent: Dict, domain: str) -> List[Dict]:
         """Generate mock emails for testing"""
-        first = agent.get('first_name', '').lower()
-        last = agent.get('last_name', '').lower()
-        brokerage = agent.get('brokerage', '').lower()
+        import re
+        def clean(s): return re.sub(r'[^a-z0-9]', '', str(s).lower())
         
+        first_raw = agent.get('first_name', '').lower()
+        last_raw = agent.get('last_name', '').lower()
+        
+        # Handle cases like first="." last="Satbir Singh"
+        if len(clean(first_raw)) < 2 and ' ' in last_raw:
+            parts = last_raw.split()
+            first_raw = parts[0]
+            last_raw = " ".join(parts[1:])
+            
+        first = clean(first_raw)
+        last = clean(last_raw)
+        
+        # If still missing, try full name
+        if not first or not last:
+            name = agent.get('name', '').lower()
+            parts = name.split()
+            if len(parts) >= 2:
+                first = clean(parts[0])
+                last = clean(parts[-1])
+        
+        if not first or not last:
+            return []
+            
+        brokerage = agent.get('brokerage', '').lower()
         emails = []
+        
+        # Ensure domain is clean
+        clean_domain = domain.split('/')[0]
         
         # Pattern-based email generation
         if 'remax' in brokerage:
             emails.extend([
                 {'email': f"{first}.{last}@remax.net", 'confidence': 0.8},
-                {'email': f"{first}{last}@remax.net", 'confidence': 0.6}
+                {'email': f"{first}{last}@remax.net", 'confidence': 0.6},
+                {'email': f"{first}.{last}@remax.ca", 'confidence': 0.8},
+                {'email': f"{first}{last}@remax.ca", 'confidence': 0.6}
             ])
         elif 'royal lepage' in brokerage:
             emails.append({'email': f"{first}.{last}@royallepage.ca", 'confidence': 0.8})
+            emails.append({'email': f"{first}{last}@royallepage.ca", 'confidence': 0.7})
         elif 'century 21' in brokerage:
             emails.append({'email': f"{first}.{last}@century21.ca", 'confidence': 0.8})
-        else:
-            # Generic pattern
-            emails.extend([
-                {'email': f"{first}.{last}@{domain}", 'confidence': 0.5},
-                {'email': f"{first}{last}@{domain}", 'confidence': 0.4}
-            ])
+            emails.append({'email': f"{first}{last}@century21.ca", 'confidence': 0.7})
+        
+        # Generic patterns for specific domain
+        emails.extend([
+            {'email': f"{first}.{last}@{clean_domain}", 'confidence': 0.5},
+            {'email': f"{first}{last}@{clean_domain}", 'confidence': 0.4},
+            {'email': f"{first}@{clean_domain}", 'confidence': 0.3}
+        ])
         
         return emails
 
@@ -408,10 +450,13 @@ class SequentialExecutor:
     """Orchestrates sequential agent execution"""
     
     def __init__(self):
+        # Initialize shared scraper
+        self.scraper = StructuredScraper()
+        
         self.agents = {
-            'search': SearchAgent(),
-            'extract': ExtractAgent(),
-            'validate': ValidateAgent(),
+            'search': SearchAgent(self.scraper),
+            'extract': ExtractAgent(self.scraper),
+            'validate': ValidateAgent(self.scraper),
             'synthesize': SynthesizeAgent()
         }
         self.workflow = ['search', 'extract', 'validate', 'synthesize']

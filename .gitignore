@@ -7,3 +7,6 @@ q-and-a-orchestra-agent/**/.pytest_cache/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Test Artifacts
+q-and-a-orchestra-agent/data/scale_test_results_*.json

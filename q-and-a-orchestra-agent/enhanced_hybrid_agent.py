@@ -44,7 +44,9 @@ class EnhancedHybridEmailAgent:
         self.router = SmartRouter()
         
         # Configuration
-        self.config = config or self._default_config()
+        self.config = self._default_config()
+        if config:
+            self.config.update(config)
         
         # Performance metrics
         self.metrics = {

@@ -157,11 +157,46 @@ class StructuredScraper:
     
     def _extract_domain(self, brokerage: str) -> Optional[str]:
         """Extract domain from brokerage name"""
-        # Remove common prefixes/suffixes
+        if not brokerage:
+            return None
+            
         clean = brokerage.lower()
-        clean = clean.replace('ltd', '').replace('inc', '')
-        clean = clean.replace('realty', '').replace('realestate', '')
-        clean = clean.replace('.', '').replace(' ', '')
+        
+        # Handle "O/A" (Operating As) - prioritize the brand name
+        if ' o/a ' in clean:
+            clean = clean.split(' o/a ')[1]
+        elif ' o/a' in clean:
+            clean = clean.split(' o/a')[1]
+            
+        # Replace & with 'and' before removing special chars
+        clean = clean.replace('&', 'and')
+        
+        # Remove strict legal suffixes only
+        replacements = [
+            ' inc.', ' inc', ' ltd.', ' ltd', ' corp.', ' corp', 
+            ' corporation', ' limited', ' llc', ' ulc', ' llp'
+        ]
+        
+        for r in replacements:
+            if clean.endswith(r):
+                clean = clean[:-len(r)]
+            elif r in clean:
+                clean = clean.replace(r, '')
+        
+        # Handle special big brands (manual overrides for cleaner domains)
+        if 'century 21' in clean:
+            return 'century21.ca'
+        if 're/max' in clean or 'remax' in clean:
+            return 'remax.ca'
+        if 'royal lepage' in clean:
+            return 'royallepage.ca'
+        if 'sothebys' in clean or "sotheby's" in clean:
+            return 'sothebysrealty.ca'
+        if 'exp realty' in clean:
+            return 'exprealty.ca'
+            
+        # Remove special chars and spaces
+        clean = clean.replace('.', '').replace(',', '').replace("'", "").replace('/', '').replace('(', '').replace(')', '').replace(' ', '')
         
         # Return .ca for Canadian context as default guess
         return f"{clean}.ca"
