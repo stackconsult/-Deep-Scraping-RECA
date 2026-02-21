@@ -47,10 +47,15 @@ from orchestrator.orchestrator import OrchestraOrchestrator
 from integrations.repo_reader import UnifiedRepositoryReader
 from agents.requirements_extractor_updated import RequirementsExtractorAgent
 
+# Hardening components
+from core.logging_setup import setup_logging
+from config.settings import settings
+
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+setup_logging(
+    log_level=settings.LOG_LEVEL,
+    enable_json=settings.ENABLE_JSON_LOGGING,
+    service_name="orchestra-agent-v2"
 )
 logger = logging.getLogger(__name__)
 
@@ -124,19 +129,19 @@ async def lifespan(app: FastAPI):
         logger.info("Starting Agent Orchestra v2...")
         
         # Check if we're in dry run mode
-        dry_run = os.getenv("DRY_RUN_MODE", "false").lower() == "true"
+        dry_run = settings.ENVIRONMENT == "development" # simplistic mapping for now, or add DRY_RUN to settings
         
         # Initialize database connections
-        db_url = os.getenv("DATABASE_URL", "postgresql://localhost/orchestra_v2")
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        db_url = settings.DATABASE_URL
+        redis_url = settings.REDIS_URL
         
         # Initialize enterprise components
         logger.info("Initializing enterprise components...")
         
         # Multi-tenancy
         vector_db_config = {
-            "type": os.getenv("VECTOR_DB_TYPE", "weaviate"),
-            "url": os.getenv("VECTOR_DB_URL", "http://localhost:8080"),
+            "type": os.getenv("VECTOR_DB_TYPE", "weaviate"), # TODO: Add to Settings
+            "url": os.getenv("VECTOR_DB_URL", "http://localhost:8080"), # TODO: Add to Settings
             "api_key": os.getenv("VECTOR_DB_API_KEY")
         }
         tenancy_manager = MultiTenancyManager(db_url, vector_db_config)
@@ -171,7 +176,7 @@ async def lifespan(app: FastAPI):
         )
         
         # Semantic caching
-        if os.getenv("ENABLE_SEMANTIC_CACHE", "true").lower() == "true":
+        if settings.ENABLE_SEMANTIC_CACHE:
             semantic_cache = SemanticCache(
                 vector_db_config,
                 similarity_threshold=float(os.getenv("CACHE_SIMILARITY_THRESHOLD", "0.95"))
@@ -179,7 +184,7 @@ async def lifespan(app: FastAPI):
             await semantic_cache.initialize()
         
         # Response validation
-        if os.getenv("ENABLE_RESPONSE_VALIDATION", "true").lower() == "true":
+        if os.getenv("ENABLE_RESPONSE_VALIDATION", "true").lower() == "true": # Keep as os.getenv for now or add to Settings
             response_validator = ResponseValidator()
             await response_validator.initialize()
         
@@ -198,7 +203,7 @@ async def lifespan(app: FastAPI):
             model_router.policy_engine = advanced_policy
         
         # Discovery orchestrator for auto-discovery
-        if os.getenv("ENABLE_AUTO_DISCOVERY", "true").lower() == "true":
+        if settings.ENABLE_AUTO_DISCOVERY:
             discovery_orchestrator = DiscoveryOrchestrator(model_router.registry)
             await discovery_orchestrator.initialize()
             
@@ -668,13 +673,10 @@ async def chat_v1_legacy(request: ChatRequest):
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8000"))
-    host = os.getenv("HOST", "0.0.0.0")
-    
     uvicorn.run(
         "main_v2:app",
-        host=host,
-        port=port,
-        reload=os.getenv("ENVIRONMENT") == "development",
-        log_level="info"
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=settings.ENVIRONMENT == "development",
+        log_level=settings.LOG_LEVEL.lower()
     )

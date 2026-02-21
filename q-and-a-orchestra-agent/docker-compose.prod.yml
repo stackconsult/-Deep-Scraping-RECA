@@ -1,0 +1,128 @@
+version: "3.8"
+
+services:
+  # =============================================================================
+  # CORE INFRASTRUCTURE
+  # =============================================================================
+  
+  # Redis for message bus and caching
+  redis:
+    image: redis:7-alpine
+    container_name: orchestra-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - orchestra-net
+
+  # PostgreSQL for persistent storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: orchestra-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orchestra_db}
+      POSTGRES_USER: ${POSTGRES_USER:-orchestra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_change_me}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orchestra} -d ${POSTGRES_DB:-orchestra_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - orchestra-net
+
+  # Ollama for local LLM inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: orchestra-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Enable GPU support if available (uncomment if running on host with NVIDIA GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    restart: always
+    networks:
+      - orchestra-net
+
+  # =============================================================================
+  # APPLICATION SERVICE
+  # =============================================================================
+  
+  orchestra-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: orchestra-agent
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Database & Redis
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-orchestra}:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/${POSTGRES_DB:-orchestra_db}
+      REDIS_URL: redis://redis:6379/0
+      
+      # LLM & AI
+      OLLAMA_BASE_URL: http://ollama:11434
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      
+      # App Config
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: production
+      
+      # Observability
+      ENABLE_JSON_LOGGING: "true"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: always
+    networks:
+      - orchestra-net
+
+volumes:
+  redis_data:
+  postgres_data:
+  ollama_data:
+
+networks:
+  orchestra-net:
+    driver: bridge

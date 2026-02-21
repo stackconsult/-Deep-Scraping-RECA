@@ -1,0 +1,81 @@
+# Production-ready Dockerfile for Q&A Orchestra Agent
+# Uses multi-stage build for smaller image size and better security
+
+# =============================================================================
+# BUILDER STAGE
+# =============================================================================
+FROM python:3.11-slim as builder
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and activate virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements file
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# =============================================================================
+# RUNTIME STAGE
+# =============================================================================
+FROM python:3.11-slim as runtime
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    PORT=8000 \
+    HOST=0.0.0.0
+
+# Install runtime system dependencies
+# curl: for healthchecks
+# libxml2, libxslt: for lxml/beautifulsoup
+RUN apt-get update && apt-get install -y \
+    curl \
+    libxml2 \
+    libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r orchestra && \
+    useradd -r -g orchestra -d /app -s /bin/bash orchestra
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Create application directory
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Create logs directory with correct permissions
+RUN mkdir -p /app/logs && \
+    chown -R orchestra:orchestra /app
+
+# Switch to non-root user
+USER orchestra
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/api/v1/health || exit 1
+
+# Expose port
+EXPOSE ${PORT}
+
+# Default command
+CMD ["python", "main_v2.py"]
