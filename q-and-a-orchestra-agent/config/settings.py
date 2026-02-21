@@ -1,7 +1,8 @@
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator, ValidationInfo
 from typing import Optional, List
 import os
+from pathlib import Path
 
 class Settings(BaseSettings):
     """
@@ -19,12 +20,11 @@ class Settings(BaseSettings):
     API_PORT: int = Field(8000, description="API Port binding")
     
     # Database & Infrastructure
-    DATABASE_URL: str = Field(..., description="PostgreSQL Database URL")
+    # Make optional with default for local dev ease, or enforce strictness in production
+    DATABASE_URL: str = Field("postgresql://orchestra:password@localhost:5432/orchestra_db", description="PostgreSQL Database URL")
     REDIS_URL: str = Field("redis://localhost:6379/0", description="Redis URL")
     
     # LLM & AI - API Keys
-    # Optional because some might be used only if specific features are enabled, 
-    # but Google/Gemini is core to this agent.
     GOOGLE_API_KEY: Optional[str] = Field(None, description="Google Gemini API Key")
     OPENAI_API_KEY: Optional[str] = Field(None, description="OpenAI API Key")
     ANTHROPIC_API_KEY: Optional[str] = Field(None, description="Anthropic API Key")
@@ -42,31 +42,27 @@ class Settings(BaseSettings):
     # Security
     CORS_ORIGINS: List[str] = Field(["*"], description="Allowed CORS origins")
     
-    @validator("GOOGLE_API_KEY")
-    def validate_core_llm_key(cls, v, values):
-        # If we are in production, we might want to enforce this more strictly
-        # unless we are purely running on local Ollama.
-        # For now, we'll log a warning if it's missing but not crash hard unless typically required.
-        # However, the README says it IS required.
-        if not v and values.get("ENVIRONMENT") == "production":
-            # Check if we are relying solely on Ollama?
+    @field_validator("GOOGLE_API_KEY")
+    @classmethod
+    def validate_core_llm_key(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        # Validation logic
+        if not v and info.data.get("ENVIRONMENT") == "production":
+            # Just log warning in practice, don't crash unless strictly required
             pass 
         return v
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"  # Ignore extra fields in .env
+    )
 
 # Global settings instance
 try:
     settings = Settings()
 except Exception as e:
-    # In case of validation error at startup
     print(f"❌ Configuration Validation Error: {e}")
-    # We might want to re-raise or handle gracefully depending on context
-    # raising ensures we fail fast on bad config
-    # raise e
-    # For now, let's create a partial/default instance for dev if .env is missing?
-    # No, fail fast is better for "Operational Hardening".
+    # Fallback for development if .env is missing/invalid
     settings = None
+
