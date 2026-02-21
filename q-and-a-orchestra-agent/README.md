@@ -194,16 +194,17 @@ This project includes **CodeBuddy** autonomous agent capabilities.
 
 - Surface scrape of all RECA agents (20,447 total)
 - Email enrichment architecture designed & implemented
-- **Scale Testing**: Verified 100% success rate on 50-agent batch with robust domain extraction
+- **Scale Testing**: Verified 100% success rate on 50-agent batch
+- **Dockerization**: Production-ready container stack (API, DB, Redis, Ollama, Dashboard)
+- **Operational Hardening**: Structured logging and config validation
+- **UI Dashboard**: Streamlit app for data visualization
 - Database schema and ingestion scripts ready
-- Data validation and filtering utilities available
 - CSV export with auto-path configuration
-- CodeBuddy Orchestra framework fully integrated
 
 ### 🔄 In Progress
 
-- **Dockerization**: Containerizing for consistent deployment
-- Operational hardening (Logging, Config Validation)
+- **Full Scale Enrichment**: Processing all 20,447 agents
+- Deep Research Agent refinement
 
 ### ❌ Issues
 
