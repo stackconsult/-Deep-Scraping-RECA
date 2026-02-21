@@ -101,6 +101,7 @@ services:
       ENABLE_JSON_LOGGING: "true"
     volumes:
       - ./logs:/app/logs
+      - ./data:/app/data
     depends_on:
       redis:
         condition: service_healthy
@@ -114,6 +115,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    restart: always
+    networks:
+      - orchestra-net
+
+  # =============================================================================
+  # DASHBOARD SERVICE
+  # =============================================================================
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: orchestra-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - ENVIRONMENT=production
+    volumes:
+      - ./data:/app/data
+      - ./dashboard:/app/dashboard
+    command: ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    depends_on:
+      - orchestra-agent
     restart: always
     networks:
       - orchestra-net

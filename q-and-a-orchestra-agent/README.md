@@ -85,6 +85,27 @@ python scripts/enrich_emails.py
 python scripts/db_ingest.py
 ```
 
+## 🐳 Production Deployment (Docker)
+
+We provide a production-ready Docker stack including the API, Database, Redis, local Ollama inference, and a Visualization Dashboard.
+
+### 1. Build & Start
+
+```bash
+# Start the full stack
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+### 2. Access Services
+
+- **API**: `http://localhost:8000` (Swagger UI: `/docs`)
+- **Dashboard**: `http://localhost:8501` (View enrichment progress)
+- **Ollama**: `http://localhost:11434` (Local LLM API)
+
+### 3. Configuration
+
+Ensure your `.env` file is populated with required keys (`GOOGLE_API_KEY`, etc.) before starting. The Docker stack mounts `./data` for persistence, so your `all_agents.json` and enrichment results are preserved.
+
 ## Architecture
 
 ```
