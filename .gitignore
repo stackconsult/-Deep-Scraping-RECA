@@ -12,4 +12,6 @@ __pycache__/
 q-and-a-orchestra-agent/data/scale_test_results_*.json
 q-and-a-orchestra-agent/data/test_enrichment*.json
 q-and-a-orchestra-agent/data/sample_*.json
+q-and-a-orchestra-agent/data/all_agents_enriched.json
+q-and-a-orchestra-agent/data/validation_report.json
 
